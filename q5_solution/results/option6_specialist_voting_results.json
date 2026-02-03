@@ -1,0 +1,53 @@
+{
+  "architecture": "Voting + CRC/Gastric Binary Specialists (Option 6)",
+  "fusion_weight_alpha": 0.8,
+  "cv_folds": 5,
+  "base_model": "voting_models_v3_notuned_xgb_rf.pkl",
+  "performance": {
+    "voting_only": {
+      "f1_macro_mean": 0.47339605620296155,
+      "f1_macro_std": 0.0654062462988414,
+      "per_class": {
+        "Control": 0.512396694214876,
+        "Breast": 0.4819277108433735,
+        "CRC": 0.45569620253164556,
+        "Gastric": 0.3380281690140845,
+        "Liver": 0.64,
+        "Lung": 0.42105263157894735
+      },
+      "fold_scores": [
+        0.4765520971403325,
+        0.5581683022859494,
+        0.40551346801346805,
+        0.3948727317013762,
+        0.5318736818736818
+      ]
+    },
+    "with_specialists": {
+      "f1_macro_mean": 0.4748839069427305,
+      "f1_macro_std": 0.043520334466687814,
+      "per_class": {
+        "Control": 0.5166666666666667,
+        "Breast": 0.4634146341463415,
+        "CRC": 0.4444444444444444,
+        "Gastric": 0.3783783783783784,
+        "Liver": 0.6382978723404256,
+        "Lung": 0.42105263157894735
+      },
+      "fold_scores": [
+        0.4765520971403325,
+        0.54005439005439,
+        0.4400326797385621,
+        0.4170935545935545,
+        0.5006868131868132
+      ],
+      "improvement": 0.001487850739768981
+    }
+  },
+  "statistical_test": {
+    "test": "paired_t_test",
+    "t_statistic": 0.1219917226155129,
+    "p_value": 0.9087887727852426,
+    "significant": false
+  }
+}

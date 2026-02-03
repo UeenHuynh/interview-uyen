@@ -1,0 +1,66 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart LR
+    subgraph INPUT["📁 Input"]
+        direction TB
+        I1["EM.csv<br/>(256)"]
+        I2["FLEN.csv<br/>(301)"]
+        I3["NUCLEOSOME.csv<br/>(601)"]
+    end
+
+    subgraph STAGE0["Stage 0"]
+        direction TB
+        S0["Combine<br/>+ Transpose"]
+    end
+
+    subgraph STAGE1["Stage 1: QC"]
+        direction TB
+        S1A["Split<br/>80/20"]
+        S1B["Filter<br/>Corr>0.9"]
+        S1C["Scale"]
+        S1A --> S1B --> S1C
+    end
+
+    subgraph STAGE2["Stage 2: Selection"]
+        direction TB
+        S2A["PLS-DA<br/>VIP"]
+        S2B["Stability<br/>LASSO"]
+        S2C["Group<br/>PCA"]
+        S2A --> S2B --> S2C
+    end
+
+    subgraph STAGE3["Stage 3: Model"]
+        direction TB
+        S3A["Nested<br/>CV"]
+        S3B["Train<br/>Models"]
+        S3C["Perm<br/>Test"]
+        S3A --> S3B --> S3C
+    end
+
+    subgraph OUTPUT["📊 Output"]
+        direction TB
+        O1["Best<br/>Model"]
+        O2["Report"]
+    end
+
+    INPUT --> |"1,158"| STAGE0
+    STAGE0 --> |"1,158"| STAGE1
+    STAGE1 --> |"541"| STAGE2
+    STAGE2 --> |"14"| STAGE3
+    STAGE3 --> OUTPUT
+
+    %% Feature count annotations
+    N1["300 × 1,158"]
+    N2["240 × 541"]
+    N3["240 × 14"]
+
+    STAGE0 -.-> N1
+    STAGE1 -.-> N2
+    STAGE2 -.-> N3
+
+    style INPUT fill:#E8F5E9
+    style STAGE0 fill:#E3F2FD
+    style STAGE1 fill:#FFF3E0
+    style STAGE2 fill:#F3E5F5
+    style STAGE3 fill:#FFEBEE
+    style OUTPUT fill:#E0F7FA

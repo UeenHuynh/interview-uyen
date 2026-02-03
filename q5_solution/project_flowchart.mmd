@@ -1,0 +1,88 @@
+%%{init: {'theme': 'default'}}%%
+
+graph TD
+    %% ============================================
+    %% CANCER CLASSIFICATION PIPELINE
+    %% ============================================
+
+    START((Start)) --> RAW
+
+    subgraph RAW[" 📥 Raw Data "]
+        R1[EM.csv<br/>256 features]
+        R2[FLEN.csv<br/>301 features]
+        R3[NUCLEOSOME.csv<br/>601 features]
+    end
+
+    RAW --> |"Combine"| COMBINED[Combined Dataset<br/>300 samples × 1,158 features]
+
+    %% Stage 0
+    COMBINED --> S0{{"Stage 0<br/>Data Preparation"}}
+    S0 --> |"Transpose + Prefix + Labels"| D0[(cleaned_data.parquet)]
+
+    %% Stage 1
+    D0 --> S1{{"Stage 1<br/>Quality Control"}}
+
+    subgraph QC[" QC Steps (TRAIN only) "]
+        Q1[1. Train/Test Split<br/>240/60 samples]
+        Q2[2. Zero-Variance<br/>-9 features]
+        Q3[3. Correlation Filter<br/>-608 features]
+        Q4[4. StandardScaler]
+        Q1 --> Q2 --> Q3 --> Q4
+    end
+
+    S1 --> QC
+    QC --> D1[(X_train_scaled<br/>240 × 541)]
+
+    %% Stage 2
+    D1 --> S2{{"Stage 2<br/>Feature Selection"}}
+
+    subgraph FS[" Feature Selection Layers "]
+        F1[Layer A: PLS-DA VIP<br/>541 → 120]
+        F2[Layer B: Stability Selection<br/>120 → 38]
+        F3[Layer C: Group PCA<br/>38 → 14]
+        F1 --> F2 --> F3
+    end
+
+    S2 --> FS
+    FS --> D2[(X_train_final<br/>240 × 14)]
+
+    %% Stage 3
+    D2 --> S3{{"Stage 3<br/>Model Training"}}
+
+    subgraph ML[" Model Training "]
+        M1[Nested CV<br/>10-outer / 5-inner]
+        M2[LogReg / RF / SVM / XGBoost]
+        M3[Permutation Test<br/>p < 0.05]
+        M1 --> M2 --> M3
+    end
+
+    S3 --> ML
+    ML --> BEST[Best Model]
+
+    %% Stage 4
+    BEST --> S4{{"Stage 4<br/>Evaluation"}}
+
+    subgraph EVAL[" Evaluation "]
+        E1[Strategy 1<br/>Two-Stage]
+        E2[Strategy 2<br/>Direct 6-Class]
+        E3[Compare & Report]
+        E1 --> E3
+        E2 --> E3
+    end
+
+    S4 --> EVAL
+    EVAL --> RESULT((📊 Final<br/>Results))
+
+    %% Styling
+    style START fill:#4CAF50,color:#fff
+    style RESULT fill:#2196F3,color:#fff
+    style S0 fill:#81D4FA
+    style S1 fill:#FFCC80
+    style S2 fill:#CE93D8
+    style S3 fill:#EF9A9A
+    style S4 fill:#80DEEA
+    style COMBINED fill:#FFF59D
+    style D0 fill:#FFF59D
+    style D1 fill:#FFF59D
+    style D2 fill:#FFF59D
+    style BEST fill:#A5D6A7

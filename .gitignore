@@ -1,0 +1,97 @@
+# ==============================================
+# GeneSolution Project .gitignore
+# ==============================================
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==== Virtual Environment ====
+.venv/
+venv/
+ENV/
+env/
+
+# ==== Node.js ====
+node_modules/
+package-lock.json
+
+# ==== IDE ====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ==== OS Files ====
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# ==== Large Data Files ====
+# Interview data (large files, keep only required structure)
+interview_data/
+*.bam
+*.bai
+*.fa
+*.fai
+*.bed
+*.zip
+
+# ==== Q4 Intermediate Files ====
+# Keep only: README.md, run_q4.sh, hist_col9.py, hist_seq4.py, runtime_comparison.py
+q4_solution/out/input.sam
+q4_solution/out/col9_abs.txt
+q4_solution/out/cigar_2digitM.sam
+q4_solution/out/seq4.txt
+
+# ==== Q5 Intermediate Files ====
+# Keep: README.md, src/*.py, key reports
+q5_solution/data/
+q5_solution/versions/
+q5_solution/out/*.txt
+*.parquet
+
+# ==== Jupyter Notebooks ====
+*.ipynb
+.ipynb_checkpoints/
+
+# ==== LaTeX ====
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.bbl
+*.blg
+
+# ==== React/Next.js App ====
+genesolution-react/
+
+# ==== Output Images (keep key ones) ====
+# Uncomment below if you want to ignore generated images
+# *.png
+
+# ==== Misc ====
+*.pdf
+!GS_ECD_ML_test_M1.pdf

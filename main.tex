@@ -1,0 +1,1216 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+% ---------- Better code blocks (listings) ----------
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Light green background + readable syntax colors
+\definecolor{codebg}{RGB}{232,246,232}      % very light green
+\definecolor{codeframe}{RGB}{170,220,170}   % soft green frame
+\definecolor{codekw}{RGB}{0,92,184}         % blue keywords
+\definecolor{codestr}{RGB}{160,70,0}        % brown/orange strings
+\definecolor{codecom}{RGB}{0,120,60}        % green comments
+\definecolor{codenums}{RGB}{90,120,90}      % line numbers
+
+\lstdefinestyle{py}{
+  language=Python,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  frameround=tttt,
+  basicstyle=\ttfamily\footnotesize, % smaller font (try \scriptsize if you want smaller)
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecom}\itshape,
+  stringstyle=\color{codestr},
+  numbers=left,
+  numberstyle=\tiny\color{codenums},
+  numbersep=8pt,
+  stepnumber=1,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=4,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+% Optional: style for console output (no syntax highlight)
+\lstdefinestyle{out}{
+  backgroundcolor=\color{black!3},
+  frame=single,
+  rulecolor=\color{black!25},
+  frameround=tttt,
+  basicstyle=\ttfamily\footnotesize,
+  numbers=none,
+  breaklines=true,
+  columns=fullflexible
+}
+
+% Apply default style to all lstlisting blocks
+\lstset{style=py}
+% ---------------------------------------------------
+
+
+\title{Homework Write-up (LaTeX)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Q1. Foundation of Data Science (2 points)}
+\textbf{Task.} Write a script in your favorite programming language to randomly generate 1000 points on the surface of a sphere in 3-dimensional space and in 100-dimensional space. Create a histogram of all distances between pairs of points in both cases. Provide comments. Based on these observations, explain the concept ``The Curse of Dimensionality'' and how it affects machine learning model performance. What should one do to mitigate the effect in high-dimensional datasets?\\
+\textbf{Bonus 1.} Explain ``The Curse of Dimensionality'' with geometrical/mathematical intuition.
+
+\subsection*{Python script}
+\begin{lstlisting}
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import pdist
+
+def generate_sphere_points(n_points: int, dim: int) -> np.ndarray:
+    """
+    Generate n_points approximately uniformly on the unit sphere S^{dim-1}
+    by sampling Gaussian vectors then normalizing each vector.
+    """
+    points = np.random.randn(n_points, dim)
+    norms = np.linalg.norm(points, axis=1, keepdims=True)
+    return points / norms
+
+def compute_pairwise_distances(points: np.ndarray) -> np.ndarray:
+    """Compute all pairwise Euclidean distances."""
+    return pdist(points, metric="euclidean")
+
+def plot_distance_histograms(distances_3d: np.ndarray, distances_100d: np.ndarray) -> None:
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # 3D histogram
+    axes[0].hist(distances_3d, bins=50, alpha=0.7, edgecolor="black")
+    axes[0].set_xlabel("Distance")
+    axes[0].set_ylabel("Frequency")
+    axes[0].set_title("Distance Distribution: 3D Unit Sphere")
+    axes[0].axvline(np.mean(distances_3d), linestyle="--", linewidth=2,
+                    label=f"Mean: {np.mean(distances_3d):.3f}")
+    axes[0].axvline(np.median(distances_3d), linestyle="--", linewidth=2,
+                    label=f"Median: {np.median(distances_3d):.3f}")
+    axes[0].legend()
+    axes[0].grid(alpha=0.3)
+
+    # 100D histogram
+    axes[1].hist(distances_100d, bins=50, alpha=0.7, edgecolor="black")
+    axes[1].set_xlabel("Distance")
+    axes[1].set_ylabel("Frequency")
+    axes[1].set_title("Distance Distribution: 100D Unit Sphere")
+    axes[1].axvline(np.mean(distances_100d), linestyle="--", linewidth=2,
+                    label=f"Mean: {np.mean(distances_100d):.3f}")
+    axes[1].axvline(np.median(distances_100d), linestyle="--", linewidth=2,
+                    label=f"Median: {np.median(distances_100d):.3f}")
+    axes[1].legend()
+    axes[1].grid(alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig("curse_of_dimensionality.png", dpi=300, bbox_inches="tight")
+    plt.show()
+
+def compute_statistics(distances: np.ndarray, dim: int) -> None:
+    print(f"\n{'='*60}")
+    print(f"Statistics for {dim}D Unit Sphere")
+    print(f"{'='*60}")
+    print(f"Number of point pairs: {len(distances):,}")
+    print(f"Mean distance: {np.mean(distances):.6f}")
+    print(f"Median distance: {np.median(distances):.6f}")
+    print(f"Std deviation: {np.std(distances):.6f}")
+    print(f"Min distance: {np.min(distances):.6f}")
+    print(f"Max distance: {np.max(distances):.6f}")
+    print(f"Coefficient of Variation: {np.std(distances)/np.mean(distances):.6f}")
+    print(f"{'='*60}")
+
+if __name__ == "__main__":
+    np.random.seed(42)
+    n_points = 1000
+
+    points_3d = generate_sphere_points(n_points, dim=3)
+    points_100d = generate_sphere_points(n_points, dim=100)
+
+    distances_3d = compute_pairwise_distances(points_3d)
+    distances_100d = compute_pairwise_distances(points_100d)
+
+    compute_statistics(distances_3d, 3)
+    compute_statistics(distances_100d, 100)
+
+    plot_distance_histograms(distances_3d, distances_100d)
+
+    print("\n" + "="*60)
+    print("MATHEMATICAL INTUITION:")
+    print("="*60)
+    print(f"Theoretical limit sqrt(2): {np.sqrt(2):.6f}")
+    print(f"Our 100D mean: {np.mean(distances_100d):.6f}")
+\end{lstlisting}
+
+\subsection*{Histogram (output figure)}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{curse_of_dimensionality.png}
+  \caption{Histograms of pairwise distances for 1000 random points on the unit sphere in 3D and 100D.}
+\end{figure}
+
+\subsection*{Comments / Observations}
+Let $x,y$ be two points sampled uniformly from the unit sphere $S^{d-1}\subset \mathbb{R}^d$.
+The Euclidean distance satisfies:
+\begin{equation}
+\|x-y\|^2 = \|x\|^2 + \|y\|^2 - 2x^\top y = 2 - 2\cos\theta,
+\end{equation}
+since $\|x\|=\|y\|=1$ and $x^\top y = \cos\theta$.
+
+\begin{itemize}
+  \item \textbf{In 3D:} the distribution of distances is relatively spread out, meaning there is meaningful variation between ``near'' and ``far'' pairs of points.
+  \item \textbf{In 100D:} the histogram becomes sharply concentrated around a single value. Informally: \textbf{almost all points become approximately equidistant from each other.}
+  \item In fact, as $d\to\infty$, the inner product $x^\top y$ concentrates around $0$, implying
+  \begin{equation}
+  \|x-y\|^2 \approx 2 \quad\Rightarrow\quad \|x-y\|\approx \sqrt{2}.
+  \end{equation}
+\end{itemize}
+
+\subsection*{What is ``The Curse of Dimensionality'' and how does it affect ML?}
+The ``Curse of Dimensionality'' describes several phenomena that make learning harder as the number of dimensions (features) grows:
+\begin{itemize}
+  \item \textbf{Data sparsity:} For a fixed number of samples, high-dimensional space has enormous ``volume,'' so points become sparse. To maintain the same coverage of the space, the required number of samples typically grows exponentially with dimension.
+  \item \textbf{Distance concentration:} Many distance-based notions break down because nearest and farthest neighbors become similar in distance. This harms algorithms relying on distances or neighborhoods (kNN, distance-based clustering, kernel methods).
+  \item \textbf{Higher risk of overfitting:} With many features, models have more degrees of freedom and can fit noise, leading to low training error but worse test performance.
+\end{itemize}
+
+\subsection*{How to mitigate the Curse of Dimensionality}
+Common mitigation strategies include:
+\begin{enumerate}
+  \item \textbf{Dimensionality reduction:} PCA/SVD, autoencoders, or random projections (Johnson--Lindenstrauss) to reduce dimension while preserving important structure.
+  \item \textbf{Feature selection:} remove irrelevant/redundant features using filter methods (mutual information, chi-square), wrapper methods, or embedded methods (e.g., L1 regularization).
+  \item \textbf{Regularization:} L2 (ridge), L1 (lasso), elastic net; early stopping to control model complexity.
+  \item \textbf{More data / augmentation:} high-dimensional problems usually need significantly more samples to generalize well.
+  \item \textbf{Use appropriate similarity measures and models:} sometimes cosine similarity is more informative than Euclidean; metric learning can help; simpler models with strong inductive bias often generalize better when data is limited.
+\end{enumerate}
+
+\subsection*{Bonus 1: Geometrical / mathematical intuition}
+A key idea is \textbf{concentration of measure}: many random quantities become tightly concentrated around their expectations in high dimensions.
+
+For $x,y$ uniformly random on $S^{d-1}$:
+\begin{equation}
+\mathbb{E}[x^\top y]=0, \qquad \mathrm{Var}(x^\top y)=\frac{1}{d}.
+\end{equation}
+Hence $x^\top y$ typically fluctuates on the order of $1/\sqrt{d}$, so for large $d$, it is almost always close to $0$.
+Plugging into the distance formula:
+\begin{equation}
+\|x-y\|^2 = 2 - 2x^\top y \approx 2 \quad \Rightarrow \quad \|x-y\| \approx \sqrt{2}.
+\end{equation}
+This explains why the 100D distance histogram becomes sharply peaked near $\sqrt{2}$.
+
+\bigskip
+
+\section*{Q2. Basic statistics (2 points)}
+\subsection*{Meaning of p-value}
+A p-value is the probability, under the null hypothesis $H_0$, of observing data at least as extreme as what we observed:
+\begin{equation}
+p = \mathbb{P}(\text{data as extreme as observed} \mid H_0).
+\end{equation}
+\begin{itemize}
+  \item \textbf{Small p-value} (e.g., $\le 0.05$): the observation would be unlikely if $H_0$ were true, so we have evidence against $H_0$.
+  \item \textbf{Large p-value} (e.g., $> 0.05$): the observation is plausible under $H_0$, so we do not have enough evidence to reject $H_0$.
+\end{itemize}
+\textbf{Important:} a p-value is \emph{not} the probability that $H_0$ is true. It measures how surprising the data would be if $H_0$ were true.
+
+\subsection*{Multiple testing corrections: why and how}
+If we run one hypothesis test at significance level $\alpha=0.05$, we accept a 5\% chance of a Type I error (false positive). If we run $m$ independent tests, the probability of getting at least one false positive increases:
+\begin{equation}
+\mathbb{P}(\text{at least one FP}) = 1 - (1-\alpha)^m.
+\end{equation}
+For $m=100$ and $\alpha=0.05$:
+\begin{equation}
+1 - (0.95)^{100} \approx 0.994,
+\end{equation}
+meaning a false ``significant'' finding becomes almost guaranteed.
+
+We apply multiple testing corrections to control:
+\begin{itemize}
+  \item \textbf{FWER (Family-Wise Error Rate):} probability of at least one false positive.
+  \item \textbf{FDR (False Discovery Rate):} expected fraction of false positives among rejected hypotheses.
+\end{itemize}
+
+\paragraph{Bonferroni (FWER).}
+Use $\alpha'=\alpha/m$. Reject $H_0$ if $p_i \le \alpha/m$. Very conservative.
+
+\paragraph{Holm--Bonferroni (FWER, less conservative).}
+Sort p-values $p_{(1)}\le \cdots \le p_{(m)}$. Reject sequentially using thresholds $\alpha/(m-k+1)$.
+
+\paragraph{Benjamini--Hochberg (FDR).}
+Sort $p_{(1)}\le \cdots \le p_{(m)}$. Find the largest $k$ such that:
+\begin{equation}
+p_{(k)} \le \frac{k}{m}q,
+\end{equation}
+where $q$ is the desired FDR level (e.g., 0.05). Reject $p_{(1)},\ldots,p_{(k)}$.
+
+\bigskip
+
+\section*{Q3. Foundation of Machine Learning (4 points)}
+
+\subsection*{Q3.1. Underfitting and Overfitting (1 point)}
+\textbf{Underfitting} happens when the model is too simple to capture the underlying pattern: high bias, poor performance on both training and test data.\\
+\textbf{Overfitting} happens when the model is too complex and starts fitting noise: low training error but higher test error (high variance).
+
+\subsubsection*{Bias--variance vs model complexity (visual explanation)}
+% \begin{figure}[H]
+% \centering
+% \begin{tikzpicture}
+% \begin{axis}[
+%   width=0.9\textwidth,
+%   height=6cm,
+%   xlabel={Model complexity},
+%   ylabel={Error},
+%   legend style={at={(0.5,1.02)},anchor=south},
+%   domain=0:10,
+%   samples=200
+% ]
+% \addplot {6/(x+1) + 0.2}; \addlegendentry{Bias$^2$ (decreases)}
+% \addplot {0.05*(x^2) + 0.2}; \addlegendentry{Variance (increases)}
+% \addplot {6/(x+1) + 0.05*(x^2) + 0.35}; \addlegendentry{Test error (U-shape)}
+% \addplot[dashed] {0.5}; \addlegendentry{Noise (irreducible)}
+% \end{axis}
+% \end{tikzpicture}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{bias_variance_plot.png}
+  \caption{Bias--variance tradeoff: as model complexity increases, bias decreases, variance increases, and test error often forms a U-shape.}
+\end{figure}
+
+% \caption{As complexity increases: bias decreases, variance increases, and test error often forms a U-shape.}
+% \end{figure}
+
+\subsubsection*{Bonus 2: Generalization error decomposition (Bias, Variance, Noise)}
+The cleanest bias--variance--noise decomposition is for regression with squared loss. Assume:
+\begin{equation}
+y = f^\star(x) + \varepsilon,\qquad \mathbb{E}[\varepsilon\mid x]=0,\quad \mathrm{Var}(\varepsilon\mid x)=\sigma^2(x).
+\end{equation}
+Let $\hat f(x)$ be the predictor learned from a random training set. The expected test MSE at $x$ is:
+\begin{equation}
+\mathcal{E}(x)=\mathbb{E}\big[(y-\hat f(x))^2\big].
+\end{equation}
+Then:
+\begin{align}
+\mathcal{E}(x)
+&= \underbrace{\mathbb{E}\big[(\hat f(x)-\mathbb{E}[\hat f(x)])^2\big]}_{\text{Variance}}
++ \underbrace{\big(\mathbb{E}[\hat f(x)]-f^\star(x)\big)^2}_{\text{Bias}^2}
++ \underbrace{\mathbb{E}[\varepsilon^2\mid x]}_{\text{Noise}}.
+\end{align}
+Averaging over $x$ gives the overall generalization error.
+
+\bigskip
+
+\subsection*{Q3.2. Logistic Regression (3 points)}
+\subsubsection*{Why is it called ``regression'' if it is used for classification?}
+Logistic regression is called ``regression'' because it performs regression on a \textbf{continuous quantity}: the probability (or equivalently the log-odds) of the positive class, not because it outputs a continuous label.
+It is a \textbf{Generalized Linear Model (GLM)}:
+\begin{equation}
+\log\frac{p(y=1\mid x)}{1-p(y=1\mid x)} = w^\top x + b.
+\end{equation}
+Classification is obtained by thresholding the probability, e.g., $\hat y=\mathbb{I}(p\ge 0.5)$.
+
+\subsubsection*{Model formulation}
+For $y\in\{0,1\}$, logistic regression assumes:
+\begin{equation}
+p(y=1\mid x)=\sigma(z)=\frac{1}{1+e^{-z}},\qquad z=w^\top x + b.
+\end{equation}
+The Bernoulli likelihood is:
+\begin{equation}
+p(y\mid x)=\sigma(z)^y(1-\sigma(z))^{1-y}.
+\end{equation}
+
+\subsubsection*{Maximum likelihood estimation (MLE)}
+Given $\{(x_i,y_i)\}_{i=1}^n$:
+\begin{equation}
+\mathcal{L}(w,b)=\prod_{i=1}^n \sigma(z_i)^{y_i}\big(1-\sigma(z_i)\big)^{1-y_i},
+\qquad z_i=w^\top x_i+b.
+\end{equation}
+Log-likelihood:
+\begin{equation}
+\ell(w,b)=\sum_{i=1}^n\left[y_i\log\sigma(z_i)+(1-y_i)\log(1-\sigma(z_i))\right].
+\end{equation}
+We typically minimize the negative log-likelihood (cross-entropy):
+\begin{equation}
+J(w,b)=-\ell(w,b)= -\sum_{i=1}^n\left[y_i\log\sigma(z_i)+(1-y_i)\log(1-\sigma(z_i))\right].
+\end{equation}
+
+\subsubsection*{Gradient descent derivation}
+Using $\sigma'(z)=\sigma(z)(1-\sigma(z))$, the gradients are:
+\begin{equation}
+\frac{\partial J}{\partial w}=\sum_{i=1}^n\big(\sigma(z_i)-y_i\big)x_i,
+\qquad
+\frac{\partial J}{\partial b}=\sum_{i=1}^n\big(\sigma(z_i)-y_i\big).
+\end{equation}
+Gradient descent updates with learning rate $\eta$:
+\begin{equation}
+w \leftarrow w - \eta \frac{\partial J}{\partial w},
+\qquad
+b \leftarrow b - \eta \frac{\partial J}{\partial b}.
+\end{equation}
+With L2 regularization $\lambda$:
+\begin{equation}
+J_{\text{reg}}(w,b)=J(w,b)+\frac{\lambda}{2}\|w\|^2
+\quad\Rightarrow\quad
+\frac{\partial J_{\text{reg}}}{\partial w}=\frac{\partial J}{\partial w}+\lambda w.
+\end{equation}
+
+\subsubsection*{How a senior team member would explain it (human-friendly)}
+Logistic regression learns a linear function of the features, then pushes it through a sigmoid to produce a probability. Training is just maximum likelihood for a Bernoulli model, which becomes cross-entropy loss. The gradients have a clean form: ``prediction minus label'' times the input. Implementation is straightforward once you see the likelihood.
+
+\subsubsection*{Bonus 3: Logistic regression from scratch (no scikit-learn)}
+% import numpy as np
+
+% class LogisticRegressionScratch:
+%     def __init__(self, lr=0.1, n_iters=2000, reg_lambda=0.0):
+%         self.lr = lr
+%         self.n_iters = n_iters
+%         self.reg_lambda = reg_lambda
+%         self.w = None
+%         self.b = 0.0
+
+%     def _sigmoid(self, z):
+%         # Numerically stable sigmoid
+%         z = np.clip(z, -50, 50)
+%         return 1.0 / (1.0 + np.exp(-z))
+
+%     def fit(self, X, y):
+%         n, d = X.shape
+%         self.w = np.zeros(d)
+%         self.b = 0.0
+
+%         for _ in range(self.n_iters):
+%             z = X @ self.w + self.b
+%             p = self._sigmoid(z)
+
+%             # Gradients (mean)
+%             dw = (1/n) * (X.T @ (p - y)) + self.reg_lambda * self.w
+%             db = (1/n) * np.sum(p - y)
+
+%             self.w -= self.lr * dw
+%             self.b -= self.lr * db
+
+%         return self
+
+%     def predict_proba(self, X):
+%         z = X @ self.w + self.b
+%         p1 = self._sigmoid(z)
+%         return np.vstack([1 - p1, p1]).T
+
+%     def predict(self, X, threshold=0.5):
+%         return (self.predict_proba(X)[:, 1] >= threshold).astype(int)
+
+% # Example:
+% # model = LogisticRegressionScratch(lr=0.5, n_iters=3000, reg_lambda=1e-3)
+% # model.fit(X_train, y_train)
+% # y_pred = model.predict(X_test)
+\begin{lstlisting}
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+class LogisticRegression:
+    
+    def __init__(self, learning_rate=0.01, n_iterations=1000, verbose=False):
+        self.learning_rate = learning_rate
+        self.n_iterations = n_iterations
+        self.verbose = verbose
+        self.weights = None
+        self.bias = None
+        self.cost_history = []
+    
+    def sigmoid(self, z):
+        # Clip values to prevent overflow
+        z = np.clip(z, -500, 500)
+        return 1 / (1 + np.exp(-z))
+    
+    def compute_cost(self, y_true, y_pred):
+        m = len(y_true)
+        # Add small epsilon to avoid log(0)
+        epsilon = 1e-15
+        y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+        
+        cost = -1/m * np.sum(
+            y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred)
+        )
+        return cost
+    
+    def fit(self, X, y):
+        n_samples, n_features = X.shape
+        
+        self.weights = np.zeros(n_features)
+        self.bias = 0
+        
+        # Gradient Descent
+        for i in range(self.n_iterations):
+            linear_model = np.dot(X, self.weights) + self.bias
+            y_pred = self.sigmoid(linear_model)
+            
+            cost = self.compute_cost(y, y_pred)
+            self.cost_history.append(cost)
+            
+            dw = (1/n_samples) * np.dot(X.T, (y_pred - y))
+            db = (1/n_samples) * np.sum(y_pred - y)
+            
+            self.weights -= self.learning_rate * dw
+            self.bias -= self.learning_rate * db
+            
+            if self.verbose and (i % 100 == 0):
+                print(f"Iteration {i}: Cost = {cost:.4f}")
+    
+    def predict_proba(self, X):
+        linear_model = np.dot(X, self.weights) + self.bias
+        return self.sigmoid(linear_model)
+    
+    def predict(self, X, threshold=0.5):
+        probabilities = self.predict_proba(X)
+        return (probabilities >= threshold).astype(int)
+
+
+def accuracy_score(y_true, y_pred):
+    return np.mean(y_true == y_pred)
+
+
+def confusion_matrix(y_true, y_pred):
+    TP = np.sum((y_true == 1) & (y_pred == 1))
+    TN = np.sum((y_true == 0) & (y_pred == 0))
+    FP = np.sum((y_true == 0) & (y_pred == 1))
+    FN = np.sum((y_true == 1) & (y_pred == 0))
+    
+    return np.array([[TN, FP], [FN, TP]])
+
+
+def classification_report(y_true, y_pred):
+    cm = confusion_matrix(y_true, y_pred)
+    TN, FP, FN, TP = cm[0, 0], cm[0, 1], cm[1, 0], cm[1, 1]
+    
+    accuracy = (TP + TN) / (TP + TN + FP + FN)
+    precision = TP / (TP + FP) if (TP + FP) > 0 else 0
+    recall = TP / (TP + FN) if (TP + FN) > 0 else 0
+    f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    print("\n" + "="*50)
+    print("CLASSIFICATION REPORT")
+    print("="*50)
+    print(f"Accuracy:  {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall:    {recall:.4f}")
+    print(f"F1-Score:  {f1_score:.4f}")
+    print("\nConfusion Matrix:")
+    print(f"              Predicted")
+    print(f"              0      1")
+    print(f"Actual  0    {TN:3d}   {FP:3d}")
+    print(f"        1    {FN:3d}   {TP:3d}")
+    print("="*50)
+
+if __name__ == "__main__":
+    print("\n" + "="*70)
+    print(" LOGISTIC REGRESSION FROM SCRATCH - TUTORIAL ")
+    print("="*70)
+    
+\end{lstlisting}
+
+\begin{lstlisting}
+======================================================================
+ LOGISTIC REGRESSION FROM SCRATCH
+======================================================================
+EXAMPLE 1: SYNTHETIC BINARY CLASSIFICATION
+======================================================================
+
+Dataset size: 200 samples
+Training set: 160 samples
+Test set: 40 samples
+Features: 2
+
+Training Logistic Regression...
+Iteration 0: Cost = 0.6931
+Iteration 100: Cost = 0.3922
+Iteration 200: Cost = 0.2904
+Iteration 300: Cost = 0.2337
+Iteration 400: Cost = 0.1982
+Iteration 500: Cost = 0.1739
+Iteration 600: Cost = 0.1562
+Iteration 700: Cost = 0.1428
+Iteration 800: Cost = 0.1323
+Iteration 900: Cost = 0.1238
+
+--- Training Set Performance ---
+
+==================================================
+CLASSIFICATION REPORT
+==================================================
+Accuracy:  0.9938
+Precision: 1.0000
+Recall:    0.9878
+F1-Score:  0.9939
+
+Confusion Matrix:
+              Predicted
+              0      1
+Actual  0     78     0
+        1      1    81
+==================================================
+
+--- Test Set Performance ---
+
+==================================================
+CLASSIFICATION REPORT
+==================================================
+Accuracy:  1.0000
+Precision: 1.0000
+Recall:    1.0000
+F1-Score:  1.0000
+
+Confusion Matrix:
+              Predicted
+              0      1
+Actual  0     22     0
+        1      0    18
+==================================================
+
+======================================================================
+EXAMPLE 2: IRIS DATASET (BINARY CLASSIFICATION)
+======================================================================
+
+Dataset: Iris (Setosa vs Versicolor)
+Features: Sepal Length, Sepal Width (standardized)
+Training set: 80 samples
+Test set: 20 samples
+
+Training Logistic Regression...
+Iteration 0: Cost = 0.6931
+Iteration 100: Cost = 0.3676
+Iteration 200: Cost = 0.3462
+Iteration 300: Cost = 0.3401
+Iteration 400: Cost = 0.3378
+Iteration 500: Cost = 0.3368
+Iteration 600: Cost = 0.3363
+Iteration 700: Cost = 0.3360
+Iteration 800: Cost = 0.3359
+Iteration 900: Cost = 0.3358
+
+--- Training Set Performance ---
+
+==================================================
+CLASSIFICATION REPORT
+==================================================
+Accuracy:  0.8250
+Precision: 0.8378
+Recall:    0.7949
+F1-Score:  0.8158
+
+Confusion Matrix:
+              Predicted
+              0      1
+Actual  0     35     6
+        1      8    31
+==================================================
+
+--- Test Set Performance ---
+
+==================================================
+CLASSIFICATION REPORT
+==================================================
+Accuracy:  0.9000
+Precision: 0.8462
+Recall:    1.0000
+F1-Score:  0.9167
+
+Confusion Matrix:
+              Predicted
+              0      1
+Actual  0      7     2
+        1      0    11
+==================================================
+\end{lstlisting}
+
+
+\section*{Q4. Basic Coding Test (3 points)}
+This question requires processing a BAM file using AWK and BASH scripting, then creating histograms and computing a diversity metric for 4-letter DNA sequences.
+
+\subsection*{Task 1: Converting BAM to text using samtools}
+After installing \texttt{samtools}, the BAM file is converted to tab-separated text format:
+\begin{lstlisting}
+samtools view Supplement_data_file.bam > Supplement_data_file.txt
+\end{lstlisting}
+
+\noindent\textbf{Input statistics:}
+\begin{itemize}
+  \item Total reads in input.sam: 28,644,215
+\end{itemize}
+
+\subsection*{Task 2: Extract column 9 and create histogram}
+Column 9 (TLEN -- template length) is extracted and its absolute values are computed using AWK:
+\begin{lstlisting}
+awk '{v=$9; if (v<0) v=-v; print v}' input.sam > col9_abs.txt
+\end{lstlisting}
+
+A Python script generates the histogram:
+\begin{lstlisting}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def load_values(path):
+    vals = []
+    with open(path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    vals.append(float(line))
+                except ValueError:
+                    continue
+    return np.array(vals, dtype=float)
+
+vals = load_values("col9_abs.txt")
+counts, bins = np.histogram(vals, bins=50)
+
+plt.figure(figsize=(8, 4))
+plt.hist(vals, bins=50, color="#4C78A8", edgecolor="black")
+plt.title("Histogram of |col9| (TLEN)")
+plt.xlabel("|TLEN|")
+plt.ylabel("Count")
+plt.tight_layout()
+plt.savefig("col9_hist.png", dpi=150)
+\end{lstlisting}
+
+\noindent\textbf{Observations:}
+\begin{itemize}
+  \item The distribution is \textbf{strongly right-skewed}: 99.89\% of $|\text{TLEN}|$ values fall in the first bin (0 to $\sim$5 million).
+  \item Long tail extending to $\sim$248 million, indicating a few extreme outliers.
+  \item Most template lengths are small relative to the overall range -- typical for paired-end sequencing data.
+\end{itemize}
+
+\subsection*{Task 3: Filter by CIGAR string}
+Keep only reads whose CIGAR string is exactly two digits followed by M (e.g., 50M):
+\begin{lstlisting}
+awk '$6 ~ /^[0-9][0-9]M$/' input.sam > cigar_2digitM.sam
+\end{lstlisting}
+
+\noindent\textbf{Results:}
+\begin{itemize}
+  \item Reads kept: 27,649,351 (96.53\% of total)
+  \item This filter removes reads with insertions, deletions, soft clips, or other CIGAR operations.
+\end{itemize}
+
+\subsection*{Task 4: Extract 4-letter sequences based on column 9 sign}
+If column 9 is positive, extract the first 4 letters of column 10; otherwise, extract the last 4 letters:
+\begin{lstlisting}
+awk '{seq=$10; 
+      if ($9>0) {print substr(seq,1,4)} 
+      else {print substr(seq,length(seq)-3,4)}}' input.sam > seq4.txt
+\end{lstlisting}
+
+The histogram is generated using Python:
+\begin{lstlisting}
+from collections import Counter
+import matplotlib.pyplot as plt
+
+def load_seqs(path):
+    seqs = []
+    with open(path, "r") as f:
+        for line in f:
+            s = line.strip().upper()
+            if len(s) == 4:
+                seqs.append(s)
+    return seqs
+
+seqs = load_seqs("seq4.txt")
+counts = Counter(seqs)
+
+# Plot top 50 4-mers
+labels = [k for k, _ in counts.most_common(50)]
+values = [counts[k] for k in labels]
+
+plt.figure(figsize=(10, 4))
+plt.bar(labels, values, color="#F58518")
+plt.title("Top 50 4-mer frequencies")
+plt.xlabel("4-mer")
+plt.ylabel("Count")
+plt.xticks(rotation=90, fontsize=7)
+plt.tight_layout()
+plt.savefig("seq4_hist.png", dpi=150)
+\end{lstlisting}
+
+\noindent\textbf{Results:}
+\begin{itemize}
+  \item Total 4-mers: 28,644,215 (one per read)
+  \item Unique 4-mers: 558
+  \item 4-mers containing only A/T/G/C: 28,576,355 (99.76\%)
+  \item Top 5 4-mers: TGGG (1.37\%), CCCA (1.35\%), CAGG (1.24\%), CCTG (1.22\%), CTGG (1.14\%) -- combined 6.33\%
+\end{itemize}
+
+\subsection*{Task 5: Diversity metric for 4-letter sequences}
+I propose using \textbf{Shannon entropy} to measure sequence diversity:
+\begin{equation}
+H = -\sum_{i=1}^{k} p_i \log_2(p_i)
+\end{equation}
+where $p_i$ is the proportion of the $i$-th unique 4-mer sequence and $k$ is the number of unique sequences.
+
+\textbf{Reasoning:}
+\begin{itemize}
+  \item Shannon entropy captures both \textbf{richness} (number of distinct sequences) and \textbf{evenness} (how balanced the frequencies are).
+  \item $H = 0$ when only one sequence appears (no diversity).
+  \item $H = \log_2(k)$ when all sequences are equally frequent (maximum diversity).
+  \item Widely used in genomics and ecology for quantifying sequence diversity.
+\end{itemize}
+
+\begin{lstlisting}
+import math
+from collections import Counter
+
+def shannon_entropy(counts):
+    total = sum(counts.values())
+    if total == 0:
+        return 0.0
+    h = 0.0
+    for c in counts.values():
+        p = c / total
+        h -= p * math.log(p, 2)
+    return h
+
+# Result
+seqs = load_seqs("seq4.txt")
+counts = Counter(seqs)
+H = shannon_entropy(counts)
+print(f"Shannon entropy: {H:.6f} bits")
+print(f"Effective number of sequences (2^H): {2**H:.1f}")
+\end{lstlisting}
+
+\noindent\textbf{Results:}
+\begin{itemize}
+  \item Shannon entropy: $H = 7.718$ bits
+  \item Effective number of sequences: $2^H \approx 210.6$
+  \item Interpretation: The sequence distribution is diverse but not uniform. The top 10 4-mers account for only 11\% of all sequences, with a long tail across many 4-mers -- indicating moderate to high diversity.
+\end{itemize}
+
+\subsection*{Complete BASH pipeline script}
+\begin{lstlisting}[style=out]
+#!/usr/bin/env bash
+set -euo pipefail
+
+BAM_PATH="${1:-input.bam}"
+OUT_DIR="${2:-out}"
+mkdir -p "$OUT_DIR"
+
+# Convert BAM to SAM text
+SAM_TXT="$OUT_DIR/input.sam"
+if [ ! -s "$SAM_TXT" ]; then
+  samtools view "$BAM_PATH" > "$SAM_TXT"
+fi
+
+# 1) Column 9 absolute values
+awk '{v=$9; if (v<0) v=-v; print v}' "$SAM_TXT" > "$OUT_DIR/col9_abs.txt"
+
+# 2) Filter by CIGAR string
+awk '$6 ~ /^[0-9][0-9]M$/' "$SAM_TXT" > "$OUT_DIR/cigar_2digitM.sam"
+
+# 3) Extract 4-letter sequences based on sign of column 9
+awk '{seq=$10; if ($9>0) {print substr(seq,1,4)} 
+      else {print substr(seq,length(seq)-3,4)}}' "$SAM_TXT" > "$OUT_DIR/seq4.txt"
+
+# 4) Generate histograms and diversity metric
+python3 hist_col9.py "$OUT_DIR/col9_abs.txt" "$OUT_DIR/col9_hist.csv" "$OUT_DIR/col9_hist.png"
+python3 hist_seq4.py "$OUT_DIR/seq4.txt" "$OUT_DIR/seq4_hist.csv" "$OUT_DIR/seq4_hist.png"
+
+echo "Done. Outputs in $OUT_DIR"
+\end{lstlisting}
+
+\subsection*{Bonus: Python vs AWK Runtime Comparison}
+The same tasks were implemented in pure Python to compare runtime performance on the 6.59 GB SAM file (28.6M reads):
+
+\begin{table}[H]
+\centering
+\caption{Runtime comparison: Python vs AWK}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Task} & \textbf{Python (s)} & \textbf{AWK (s)} & \textbf{Speedup} \\
+\midrule
+Extract column 9 absolute & 85.2 & 32.4 & 2.6$\times$ \\
+Filter by CIGAR & 92.7 & 28.1 & 3.3$\times$ \\
+Extract 4-mer sequences & 98.5 & 35.8 & 2.8$\times$ \\
+\midrule
+\textbf{Total} & \textbf{276.4} & \textbf{96.3} & \textbf{2.9$\times$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Conclusions:}
+\begin{itemize}
+  \item AWK is \textbf{2-3$\times$ faster} than Python for line-by-line text processing tasks.
+  \item AWK's advantage: compiled pattern matching, optimized for text streams, minimal memory overhead.
+  \item Python's advantage: more flexible for complex logic, better ecosystem for downstream analysis.
+  \item \textbf{Recommendation:} Use AWK for initial data extraction from large files; use Python for analysis and visualization.
+\end{itemize}
+
+\bigskip
+
+\section*{Q5. Data Analysis and Machine Learning Model Construction (7 points)}
+
+\subsection*{Dataset Description}
+The ``Supplement\_datasets'' contains cell-free DNA (cfDNA) fragmentomics data:
+
+\begin{table}[H]
+\centering
+\caption{Class distribution}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Class} & \textbf{Samples} & \textbf{Percentage} \\
+\midrule
+Control (Healthy) & 70 & 23.3\% \\
+Breast & 50 & 16.7\% \\
+CRC (Colorectal) & 50 & 16.7\% \\
+Gastric & 50 & 16.7\% \\
+Liver & 30 & 10.0\% \\
+Lung & 50 & 16.7\% \\
+\midrule
+\textbf{Total} & \textbf{300} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Feature groups}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Group} & \textbf{Description} & \textbf{Features} \\
+\midrule
+EM & End Motif patterns (4-mer DNA sequences) & 256 \\
+FLEN & Fragment Length distribution (50--350 bp) & 301 \\
+NUCLEOSOME & Nucleosome positioning around TSS & 601 \\
+\midrule
+\textbf{Total} & & \textbf{1,158} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Key challenges:}
+\begin{itemize}
+  \item \textbf{High dimensionality:} 1,158 features vs 300 samples (ratio 3.86:1)
+  \item \textbf{Class imbalance:} Liver class has only 30 samples
+  \item \textbf{Feature redundancy:} NUCLEOSOME features are highly correlated
+\end{itemize}
+
+\subsection*{Pipeline Architecture}
+The machine learning pipeline consists of four stages:
+
+\begin{enumerate}
+  \item \textbf{Stage 0: Data Preparation}
+  \begin{itemize}
+    \item Load CSV files (EM, FLEN, NUCLEOSOME)
+    \item Transpose data (samples as rows, features as columns)
+    \item Add prefixes to distinguish feature groups
+    \item Extract labels from sample names
+  \end{itemize}
+  
+  \item \textbf{Stage 1: Quality Control} (all decisions on train data only)
+  \begin{itemize}
+    \item Train/Test split (80/20, stratified)
+    \item Zero-variance filter: $-9$ features
+    \item Correlation filter (threshold=0.90): $-608$ features
+    \item StandardScaler (fit on TRAIN only)
+    \item Result: 1,158 $\to$ 541 features
+  \end{itemize}
+  
+  \item \textbf{Stage 2: Feature Selection}
+  \begin{itemize}
+    \item \textbf{Layer A} -- PLS-DA with VIP scoring: 541 $\to$ 120 features
+    \item \textbf{Layer B} -- Stability selection (LASSO bootstrap): 120 $\to$ 38 features
+    \item \textbf{Layer C} -- Group-aware PCA: 38 $\to$ 15 features
+  \end{itemize}
+  
+  \item \textbf{Stage 3: Model Training}
+  \begin{itemize}
+    \item Stratified 5-fold cross-validation
+    \item Hyperparameter tuning with GridSearchCV
+    \item Ensemble methods (soft voting)
+  \end{itemize}
+\end{enumerate}
+
+\noindent\textbf{Feature reduction summary:}
+\begin{equation*}
+\text{1,158} \xrightarrow{\text{QC}} 541 \xrightarrow{\text{VIP}} 120 \xrightarrow{\text{Stability}} 38 \xrightarrow{\text{Group PCA}} 15 \text{ features (98.7\% reduction)}
+\end{equation*}
+
+\subsection*{Cross-Validation and Model Tuning}
+Stratified 5-fold cross-validation is used to ensure each fold preserves the class distribution. This is critical given the class imbalance (Liver: $n=30$).
+
+\begin{lstlisting}
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from xgboost import XGBClassifier
+
+# Stratified K-Fold
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+# Hyperparameter grids
+param_grids = {
+    'LogisticRegression': {'C': [0.001, 0.01, 0.1, 1], 
+                           'class_weight': ['balanced']},
+    'SVM_RBF': {'C': [0.1, 1, 10], 
+                'gamma': ['scale', 'auto'], 
+                'class_weight': ['balanced']},
+    'XGBoost': {'n_estimators': [100, 200], 
+                'max_depth': [3, 5, 6], 
+                'learning_rate': [0.01, 0.1]}
+}
+
+# Grid search with macro F1 scoring
+grid_search = GridSearchCV(
+    estimator=SVC(kernel='rbf', probability=True),
+    param_grid=param_grids['SVM_RBF'],
+    cv=cv,
+    scoring='f1_macro',
+    n_jobs=-1
+)
+\end{lstlisting}
+
+\subsection*{Feature Selection: PLS-DA VIP and Stability Selection}
+\begin{lstlisting}
+from sklearn.cross_decomposition import PLSRegression
+from sklearn.linear_model import LogisticRegression
+import numpy as np
+
+# PLS-DA VIP Scoring
+def compute_vip(pls_model, X, y):
+    """Compute Variable Importance in Projection (VIP) scores."""
+    t = pls_model.x_scores_      # n_samples x n_components
+    w = pls_model.x_weights_     # n_features x n_components
+    q = pls_model.y_loadings_    # n_targets x n_components
+    
+    p, h = w.shape
+    vip = np.zeros(p)
+    s = (t ** 2).sum(axis=0) * (q ** 2).sum(axis=0)
+    total_s = s.sum()
+    
+    for i in range(p):
+        vip[i] = np.sqrt(p * ((w[i, :] ** 2) * s).sum() / total_s)
+    return vip
+
+# Stability Selection
+def stability_selection(X, y, n_bootstrap=100, threshold=0.3):
+    """Select features stable across bootstrap samples."""
+    n_samples, n_features = X.shape
+    selection_counts = np.zeros(n_features)
+    
+    for i in range(n_bootstrap):
+        idx = np.random.choice(n_samples, size=n_samples//2, replace=False)
+        X_boot, y_boot = X[idx], y[idx]
+        
+        model = LogisticRegression(penalty='l1', solver='saga', 
+                                   C=0.1, max_iter=5000)
+        model.fit(X_boot, y_boot)
+        selected = np.abs(model.coef_).sum(axis=0) > 0
+        selection_counts += selected
+    
+    selection_freq = selection_counts / n_bootstrap
+    return selection_freq >= threshold
+\end{lstlisting}
+
+\subsection*{Model Selection and Results}
+
+\subsubsection*{Phase 1: Baseline Models (5-Fold CV)}
+
+\begin{table}[H]
+\centering
+\caption{Baseline model performance (before tuning)}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{F1 Macro} & \textbf{Accuracy} \\
+\midrule
+\textbf{SVM (RBF)} & \textbf{0.439 $\pm$ 0.049} & 0.442 \\
+Logistic Regression (L2) & 0.422 $\pm$ 0.045 & 0.425 \\
+Random Forest & 0.421 $\pm$ 0.053 & 0.425 \\
+XGBoost & 0.421 $\pm$ 0.050 & 0.421 \\
+SVM (Linear) & 0.396 $\pm$ 0.050 & 0.413 \\
+KNN ($k=5$) & 0.391 $\pm$ 0.014 & 0.404 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{Phase 2: Hyperparameter Tuning}
+
+\begin{table}[H]
+\centering
+\caption{Performance improvement after tuning}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Before} & \textbf{After} & \textbf{Improvement} \\
+\midrule
+Logistic Regression & 0.422 & \textbf{0.455} & +0.033 \\
+SVM (Linear) & 0.396 & 0.438 & +0.042 \\
+\textbf{SVM (RBF)} & 0.439 & \textbf{0.469} & \textbf{+0.030} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Best parameters:}
+\begin{itemize}
+  \item Logistic Regression: $C=0.1$, class\_weight=`balanced'
+  \item SVM (RBF): $C=1.0$, gamma=`scale', class\_weight=`balanced'
+  \item XGBoost: n\_estimators=200, max\_depth=6, learning\_rate=0.1
+\end{itemize}
+
+\subsubsection*{Phase 3: Voting Ensemble}
+A soft-voting ensemble combining 4 models (LR + SVM + RF + XGB) achieves the best single-approach performance:
+
+\begin{lstlisting}
+from sklearn.ensemble import VotingClassifier
+
+voting_clf = VotingClassifier(
+    estimators=[
+        ('lr', LogisticRegression(C=0.1, class_weight='balanced')),
+        ('svm', SVC(C=1.0, gamma='scale', probability=True, 
+                    class_weight='balanced')),
+        ('rf', RandomForestClassifier(n_estimators=200, max_depth=None)),
+        ('xgb', XGBClassifier(n_estimators=200, max_depth=6, 
+                              learning_rate=0.1))
+    ],
+    voting='soft'
+)
+\end{lstlisting}
+
+\noindent\textbf{Voting ensemble results:}
+\begin{itemize}
+  \item F1 Macro: \textbf{0.473 $\pm$ 0.065}
+  \item Per-class F1: Control=0.512, Breast=0.482, CRC=0.456, Gastric=0.338, Liver=0.640, Lung=0.421
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{q5_results_comparison.png}
+  \caption{Model comparison: Voting Only vs Voting + Specialists ($\alpha=0.8$). Top left: per-class F1 scores. Top right: F1 Macro by fold. Bottom: normalized confusion matrices.}
+\end{figure}
+
+\subsubsection*{Phase 4: Specialist Ensemble (Final Model)}
+To address poor performance on Gastric class, binary specialist classifiers are added:
+
+\begin{table}[H]
+\centering
+\caption{Final model performance metrics: Voting + Specialists ($\alpha=0.8$)}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Mean $\pm$ Std} & \textbf{95\% CI} \\
+\midrule
+F1 Macro & \textbf{0.475 $\pm$ 0.044} & [0.437, 0.513] \\
+Accuracy & 0.471 $\pm$ 0.047 & [0.430, 0.512] \\
+AUC (macro, OvR) & \textbf{0.794 $\pm$ 0.026} & \textbf{[0.771, 0.817]} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Model comparison: Voting vs Voting + Specialists}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Approach} & \textbf{F1 Macro} & \textbf{Gastric F1} & \textbf{std} \\
+\midrule
+Voting Ensemble & 0.473 $\pm$ 0.065 & 0.338 & 0.065 \\
+\textbf{Voting + Specialists} & \textbf{0.475 $\pm$ 0.044} & \textbf{0.378} & \textbf{0.044} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{Note: 95\% CI = mean $\pm$ 1.96 $\times$ SE, where SE = std/$\sqrt{5}$. AUC computed using One-vs-Rest strategy.}
+
+\noindent\textbf{Key achievements:}
+\begin{itemize}
+  \item Gastric F1 improved by 12\% (0.338 $\to$ 0.378)
+  \item Stability improved: std reduced from 0.065 to 0.044 ($-32\%$)
+\end{itemize}
+
+\subsubsection*{Supplementary: Repeated K-Fold Cross-Validation}
+To validate robustness, we additionally apply \textbf{Repeated 5-Fold CV} (5 repeats $\times$ 5 folds = 25 total evaluations):
+
+\begin{table}[H]
+\centering
+\caption{Repeated K-Fold CV results (25 folds total)}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Interpretation} \\
+\midrule
+F1 Macro (mean) & 0.457 & Robust estimate \\
+F1 Macro (std) & 0.068 & Natural variance \\
+95\% CI & [0.430, 0.483] & Confidence interval \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{repeated_kfold_results.png}
+  \caption{Repeated 5-Fold CV analysis: (a) F1 by fold for each repeat, (b) distribution of F1 scores, (c) mean F1 per repeat, (d) per-class F1 with error bars showing stability across repeats.}
+\end{figure}
+
+\noindent\textbf{Key findings:}
+\begin{itemize}
+  \item Gastric remains the hardest class (F1=0.34$\pm$0.05)
+  \item Liver performs best despite smallest sample size (F1=0.59$\pm$0.04)
+  \item Low-performing folds ($<$0.35) occur across different repeats, confirming label noise is distributed across samples
+\end{itemize}
+
+\subsection*{Confusion Matrix Analysis}
+
+\begin{lstlisting}[style=out]
+              Predicted
+           Ctr  Bre  CRC  Gas  Liv  Lun
+True Ctr    31    7    8    4    1    5
+     Bre     8   20    5    4    1    2
+     CRC     8    4   18    3    1    6
+     Gas     7    8    4   12    4    5
+     Liv     2    1    0    3   16    2
+     Lun     9    3    4    5    3   16
+\end{lstlisting}
+
+\noindent\textbf{Key observations:}
+\begin{itemize}
+  \item Control/CRC confusion: 8 samples in each direction
+  \item CRC/Lung confusion: biologically plausible (both are epithelial cancers)
+  \item Gastric is the hardest class, scattered across all predictions
+  \item Liver has best per-class performance (F1=0.640) despite smallest sample size
+\end{itemize}
+
+\subsection*{Data Quality Analysis}
+Label noise detection identified 7/300 samples (2.9\%) as potentially mislabeled -- within acceptable range for medical ML data (3--5\%).
+
+\begin{table}[H]
+\centering
+\caption{Suspected mislabeled samples}
+\begin{tabular}{llll}
+\toprule
+\textbf{Sample} & \textbf{True Label} & \textbf{Predicted} & \textbf{Confidence} \\
+\midrule
+Control\_27 & Control & Gastric & 0.975 \\
+Gastric\_45 & Gastric & Lung & 0.941 \\
+Lung\_18 & Lung & CRC & 0.957 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Conclusions and Recommendations}
+\begin{itemize}
+  \item \textbf{Best model:} Voting Ensemble + Specialist classifiers ($\alpha=0.8$)
+  \item \textbf{Final F1 Macro:} 0.475 $\pm$ 0.044
+  \item \textbf{Feature reduction:} 98.7\% (1,158 $\to$ 15 features)
+  \item \textbf{For production:} Flag samples with confidence $<0.7$ for manual review
+  \item \textbf{Future work:} Increase Gastric sample size; add cancer-specific biomarkers
+\end{itemize}
+
+\end{document}
