@@ -1,3 +1,0 @@
-shannon_entropy_bits	7.718243
-unique_sequences	558
-total_sequences	28644215

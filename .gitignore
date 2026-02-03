@@ -1,5 +1,7 @@
 # ==============================================
 # GeneSolution Project .gitignore
+# CHỈ GIỮ: README.md, code (.py, .sh), main.tex
+# BỎ: models, pdf, data, images thừa
 # ==============================================
 
 # ==== Python ====
@@ -11,17 +13,9 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
 .eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
 
 # ==== Virtual Environment ====
@@ -33,6 +27,7 @@ env/
 # ==== Node.js ====
 node_modules/
 package-lock.json
+package.json
 
 # ==== IDE ====
 .idea/
@@ -46,35 +41,39 @@ package-lock.json
 Thumbs.db
 __MACOSX/
 
-# ==== Large Data Files ====
-# Interview data (large files, keep only required structure)
+# ==== TOÀN BỘ THƯ MỤC KHÔNG CẦN ====
 interview_data/
+genesolution-react/
+
+# ==== FILE LỚN / DATA ====
 *.bam
 *.bai
 *.fa
 *.fai
 *.bed
 *.zip
+*.sam
+*.txt
 
-# ==== Q4 Intermediate Files ====
-# Keep only: README.md, run_q4.sh, hist_col9.py, hist_seq4.py, runtime_comparison.py
-q4_solution/out/input.sam
-q4_solution/out/col9_abs.txt
-q4_solution/out/cigar_2digitM.sam
-q4_solution/out/seq4.txt
+# ==== MODELS (không cần upload) ====
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
 
-# ==== Q5 Intermediate Files ====
-# Keep: README.md, src/*.py, key reports
-q5_solution/data/
-q5_solution/versions/
-q5_solution/out/*.txt
+# ==== PDF ====
+*.pdf
+
+# ==== Parquet / Data files ====
 *.parquet
 
 # ==== Jupyter Notebooks ====
 *.ipynb
 .ipynb_checkpoints/
 
-# ==== LaTeX ====
+# ==== LaTeX build files ====
 *.aux
 *.log
 *.out
@@ -85,13 +84,34 @@ q5_solution/out/*.txt
 *.bbl
 *.blg
 
-# ==== React/Next.js App ====
-genesolution-react/
+# ==== DOCX files ====
+*.docx
 
-# ==== Output Images (keep key ones) ====
-# Uncomment below if you want to ignore generated images
-# *.png
+# ==== Images (chỉ giữ hình kết quả chính) ====
+*.png
 
-# ==== Misc ====
-*.pdf
-!GS_ECD_ML_test_M1.pdf
+# ==== Mermaid diagrams ====
+*.mmd
+
+# ==== Q4 OUTPUT FOLDER ====
+q4_solution/out/
+
+# ==== Q5 FOLDERS KHÔNG CẦN ====
+q5_solution/data/
+q5_solution/versions/
+q5_solution/out/
+q5_solution/results/
+
+# ==== Q5 extra docs ====
+q5_solution/DATA_DISCOVERY.md
+q5_solution/EXPERIMENTS_SUMMARY.md
+q5_solution/FINAL_REPORT.md
+q5_solution/PROJECT_REPORT.md
+q5_solution/dataquality.md
+q5_solution/hybrid_ensemble_implementation_plan.md
+q5_solution/project_plan_v2_updated.md
+q5_solution/project_plan_v3.md
+
+# ==== Root level files không cần ====
+/generate_q5_figure.py
+/readme.md
