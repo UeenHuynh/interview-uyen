@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-Complete machine learning pipeline for **cfDNA (cell-free DNA) fragmentomics classification** to detect cancer types from blood samples. The pipeline includes exploratory data analysis (EDA), feature engineering, model training with cross-validation, and ensemble methods.
+Complete machine learning pipeline for **cfDNA (cell-free DNA) fragmentomics classification** to detect cancer types from blood samples.
 
 ---
 
@@ -10,22 +10,15 @@ Complete machine learning pipeline for **cfDNA (cell-free DNA) fragmentomics cla
 
 ```
 q5_solution/
-├── README.md                   # This file
-├── src/                        # Source code
-│   ├── eda.py                 # Exploratory data analysis
-│   ├── stage0_data_load.py    # Data loading and preparation
-│   ├── stage1_preprocessing.py # Quality control and preprocessing
-│   ├── stage2_feature_selection.py # Feature selection pipeline
-│   ├── voting_classifier.py   # Voting ensemble model
-│   ├── specialist_ensemble.py # Specialist classifiers for hard classes
-│   ├── repeated_kfold_cv.py   # Robustness validation
-│   └── compute_auc_accuracy.py # Metrics computation
-├── data/                      # Processed data files
-├── results/                   # Model outputs and figures
-├── out/                       # EDA outputs (PCA plots, stats)
-├── DATA_DISCOVERY.md          # Detailed data analysis notes
-├── PROJECT_REPORT.md          # Technical report
-└── FINAL_REPORT.md           # Summary of findings
+├── README.md                    # This file
+└── src/                         # Source code
+    ├── stage0_prepare.py        # Data loading & preparation
+    ├── stage1_qc.py             # Quality control & preprocessing
+    ├── stage2_feature_selection.py  # Feature selection (VIP, stability)
+    ├── stage2_group_pca_direct.py   # Group-aware PCA
+    ├── stage3_phase1_baseline.py    # Baseline model training
+    ├── stage3_phase2_tuning.py      # Hyperparameter tuning
+    └── specialist_ensemble.py       # Final ensemble model
 ```
 
 ---
@@ -53,34 +46,30 @@ q5_solution/
 | NUCLEOSOME | Nucleosome positioning around TSS | 601 |
 | **Total** | | **1,158** |
 
-### Key Challenges
-- **High dimensionality**: 1,158 features vs 300 samples (ratio 3.86:1)
-- **Class imbalance**: Liver class has only 30 samples
-- **Feature redundancy**: NUCLEOSOME features are highly correlated
-
 ---
 
 ## 🔄 Pipeline Architecture
 
 ```
-Stage 0: Data Preparation
+Stage 0: Data Preparation (stage0_prepare.py)
+    • Load CSV files, transpose, extract labels
     ↓
-Stage 1: Quality Control (on train data only)
+Stage 1: Quality Control (stage1_qc.py)
+    • Train/Test split (80/20, stratified)
     • Zero-variance filter → -9 features
     • Correlation filter (r>0.90) → -608 features
     • StandardScaler (fit on TRAIN only)
     └── Result: 1,158 → 541 features
     ↓
 Stage 2: Feature Selection
-    • Layer A - PLS-DA VIP: 541 → 120 features
-    • Layer B - Stability Selection (LASSO): 120 → 38 features
-    • Layer C - Group-aware PCA: 38 → 15 features
-    └── Total reduction: 98.7%
+    • stage2_feature_selection.py: VIP + Stability Selection
+    • stage2_group_pca_direct.py: Group-aware PCA
+    └── Result: 541 → 15 features (98.7% reduction)
     ↓
 Stage 3: Model Training
-    • Stratified 5-fold cross-validation
-    • Hyperparameter tuning (GridSearchCV)
-    • Ensemble methods (soft voting)
+    • stage3_phase1_baseline.py: Baseline models (LR, SVM, RF, XGB)
+    • stage3_phase2_tuning.py: Hyperparameter tuning
+    • specialist_ensemble.py: Final voting ensemble + specialists
 ```
 
 ---
@@ -89,104 +78,57 @@ Stage 3: Model Training
 
 ### Prerequisites
 ```bash
-pip install numpy pandas scikit-learn xgboost matplotlib seaborn
+pip install numpy pandas scikit-learn xgboost
 ```
 
 ### Run the Pipeline
 ```bash
-# 1. EDA
-python src/eda.py
+cd q5_solution/src
 
-# 2. Full pipeline with voting classifier
-python src/voting_classifier.py
+# 1. Data preparation
+python stage0_prepare.py
 
-# 3. Specialist ensemble for improved Gastric detection
-python src/specialist_ensemble.py
+# 2. Quality control
+python stage1_qc.py
 
-# 4. Robustness validation
-python src/repeated_kfold_cv.py
+# 3. Feature selection
+python stage2_feature_selection.py
+python stage2_group_pca_direct.py
+
+# 4. Model training
+python stage3_phase1_baseline.py
+python stage3_phase2_tuning.py
+
+# 5. Final ensemble
+python specialist_ensemble.py
 ```
 
 ---
 
 ## 📈 Results Summary
 
-### Baseline Models (5-Fold CV, before tuning)
-| Model | F1 Macro | Accuracy |
-|-------|----------|----------|
-| **SVM (RBF)** | **0.439 ± 0.049** | 0.442 |
-| Logistic Regression | 0.422 ± 0.045 | 0.425 |
-| Random Forest | 0.421 ± 0.053 | 0.425 |
-| XGBoost | 0.421 ± 0.050 | 0.421 |
-
-### After Hyperparameter Tuning
-| Model | Before | After | Improvement |
-|-------|--------|-------|-------------|
-| Logistic Regression | 0.422 | **0.455** | +0.033 |
-| SVM (RBF) | 0.439 | **0.469** | +0.030 |
-| SVM (Linear) | 0.396 | 0.438 | +0.042 |
-
 ### Final Model: Voting + Specialists
-| Metric | Value | 95% CI |
-|--------|-------|--------|
-| **F1 Macro** | **0.475 ± 0.044** | [0.437, 0.513] |
-| Accuracy | 0.471 ± 0.047 | [0.430, 0.512] |
-| **AUC (macro, OvR)** | **0.794 ± 0.026** | [0.771, 0.817] |
+| Metric | Value |
+|--------|-------|
+| **F1 Macro** | **0.475 ± 0.044** |
+| Accuracy | 0.471 ± 0.047 |
+| **AUC (macro)** | **0.794 ± 0.026** |
 
 ### Per-Class F1 Scores
-| Class | Voting Only | Voting + Specialists |
-|-------|-------------|---------------------|
-| Control | 0.512 | 0.510 |
-| Breast | 0.482 | 0.480 |
-| CRC | 0.456 | 0.458 |
-| **Gastric** | 0.338 | **0.378** (+12%) |
-| Liver | 0.640 | 0.638 |
-| Lung | 0.421 | 0.419 |
+| Class | F1 Score |
+|-------|----------|
+| Control | 0.510 |
+| Breast | 0.480 |
+| CRC | 0.458 |
+| Gastric | 0.378 |
+| Liver | 0.638 |
+| Lung | 0.419 |
 
 ---
 
 ## 🔬 Key Findings
 
-1. **Feature Reduction**: Reduced features by 98.7% (1,158 → 15) while maintaining performance
-2. **Gastric Detection**: Improved by 12% using specialist classifiers
-3. **Model Stability**: Standard deviation reduced by 32% with specialist ensemble
-4. **Best Performer**: Liver class achieves highest F1 (0.64) despite smallest sample size
-5. **Label Noise**: ~2.9% of samples (7/300) identified as potentially mislabeled
-
----
-
-## 📊 Confusion Matrix Insights
-
-```
-              Predicted
-           Ctr  Bre  CRC  Gas  Liv  Lun
-True Ctr    31    7    8    4    1    5
-     Bre     8   20    5    4    1    2
-     CRC     8    4   18    3    1    6
-     Gas     7    8    4   12    4    5
-     Liv     2    1    0    3   16    2
-     Lun     9    3    4    5    3   16
-```
-
-**Key Observations**:
-- Control/CRC confusion: bidirectional (8 samples each way)
-- CRC/Lung confusion: biologically plausible (both epithelial cancers)
-- Gastric: most scattered across all predictions
-- Liver: cleanest predictions despite smallest sample size
-
----
-
-## 🔮 Future Improvements
-
-1. **Increase Gastric sample size** (~50 → 100 samples)
-2. **Add cancer-specific biomarkers** from external databases
-3. **Deep learning** approaches for end-to-end feature learning
-4. **Production deployment**: Flag samples with confidence <0.7 for manual review
-
----
-
-## 📚 References
-
-- cfDNA fragmentomics: Snyder et al. (2016) "Cell-free DNA Comprises an In Vivo Nucleosome Footprint"
-- PLS-DA VIP: Chong & Jun (2005) "Performance of some variable selection methods"
-- Stability Selection: Meinshausen & Bühlmann (2010) "Stability selection"
+1. **Feature Reduction**: 98.7% (1,158 → 15 features)
+2. **Best Performer**: Liver class (F1=0.64) despite smallest sample size
+3. **Hardest Class**: Gastric (F1=0.38) - improved 12% with specialists
+4. **Model Stability**: std reduced by 32% with specialist ensemble
