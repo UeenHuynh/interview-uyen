@@ -1,7 +1,6 @@
 # ==============================================
 # GeneSolution Project .gitignore
-# CHỈ GIỮ: README.md, code (.py, .sh), main.tex
-# BỎ: models, pdf, data, images thừa
+# CHỈ GIỮ: README.md, main.tex, và code CHÍNH
 # ==============================================
 
 # ==== Python ====
@@ -87,22 +86,28 @@ genesolution-react/
 # ==== DOCX files ====
 *.docx
 
-# ==== Images (chỉ giữ hình kết quả chính) ====
+# ==== Images ====
 *.png
 
 # ==== Mermaid diagrams ====
 *.mmd
 
+# ==== JSON results ====
+*.json
+
+# ==== CSV files ====
+*.csv
+
 # ==== Q4 OUTPUT FOLDER ====
 q4_solution/out/
 
-# ==== Q5 FOLDERS KHÔNG CẦN ====
+# ==== Q5 TOÀN BỘ FOLDERS KHÔNG CẦN ====
 q5_solution/data/
 q5_solution/versions/
 q5_solution/out/
 q5_solution/results/
 
-# ==== Q5 extra docs ====
+# ==== Q5 extra docs (chỉ giữ README.md) ====
 q5_solution/DATA_DISCOVERY.md
 q5_solution/EXPERIMENTS_SUMMARY.md
 q5_solution/FINAL_REPORT.md
@@ -111,6 +116,20 @@ q5_solution/dataquality.md
 q5_solution/hybrid_ensemble_implementation_plan.md
 q5_solution/project_plan_v2_updated.md
 q5_solution/project_plan_v3.md
+
+# ==== Q5 src - CHỈ GIỮ CÁC FILE CHÍNH ====
+# Bỏ các file plot, các version cũ, các file thử nghiệm
+q5_solution/src/plot_*.py
+q5_solution/src/*_v3.py
+q5_solution/src/option6_*.py
+q5_solution/src/compare_*.py
+q5_solution/src/compute_*.py
+q5_solution/src/tune_*.py
+q5_solution/src/hybrid_ensemble.py
+q5_solution/src/repeated_kfold_cv.py
+
+# ==== Q5 eda.py ở root (không cần, đã có trong src) ====
+q5_solution/eda.py
 
 # ==== Root level files không cần ====
 /generate_q5_figure.py
