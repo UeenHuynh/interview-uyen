@@ -134,3 +134,16 @@ q5_solution/eda.py
 # ==== Root level files không cần ====
 /generate_q5_figure.py
 /readme.md
+
+# ==== CatBoost artifacts ====
+catboost_info/
+q5_solution/catboost_info/
+
+# ==== Q5 old scripts ====
+q5_solution/src/voting_*.py
+q5_solution/src/specialist_*.py
+q5_solution/src/ensemble_*.py
+q5_solution/src/catboost_*.py
+
+# ==== Gemini ====
+.gemini/

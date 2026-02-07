@@ -1067,8 +1067,8 @@ SVM (Linear) & 0.396 & 0.438 & +0.042 \\
   \item XGBoost: n\_estimators=200, max\_depth=6, learning\_rate=0.1
 \end{itemize}
 
-\subsubsection*{Phase 3: Voting Ensemble}
-A soft-voting ensemble combining 4 models (LR + SVM + RF + XGB) achieves the best single-approach performance:
+\subsubsection*{Phase 3: Ensemble Methods}
+Two ensemble approaches are compared: traditional Voting (LR+SVM+RF+XGB) and CatBoost-based ensembles:
 
 \begin{lstlisting}
 from sklearn.ensemble import VotingClassifier
@@ -1088,8 +1088,9 @@ voting_clf = VotingClassifier(
 
 \noindent\textbf{Voting ensemble results:}
 \begin{itemize}
-  \item F1 Macro: \textbf{0.473 $\pm$ 0.065}
-  \item Per-class F1: Control=0.512, Breast=0.482, CRC=0.456, Gastric=0.338, Liver=0.640, Lung=0.421
+  \item F1 Macro: 0.457 $\pm$ 0.047
+  \item CatBoost alone: \textbf{0.482 $\pm$ 0.059}
+  \item Voting(CatBoost): 0.484 $\pm$ 0.070
 \end{itemize}
 
 \begin{figure}[H]
@@ -1098,35 +1099,43 @@ voting_clf = VotingClassifier(
   \caption{Model comparison: Voting Only vs Voting + Specialists ($\alpha=0.8$). Top left: per-class F1 scores. Top right: F1 Macro by fold. Bottom: normalized confusion matrices.}
 \end{figure}
 
-\subsubsection*{Phase 4: Specialist Ensemble (Final Model)}
-To address poor performance on Gastric class, binary specialist classifiers are added:
+\subsubsection*{Phase 4: CatBoost + Specialist Ensemble (Final Model)}
+To address poor performance on Gastric and CRC classes, CatBoost with binary specialist classifiers is used:
 
 \begin{table}[H]
 \centering
-\caption{Final model performance metrics: Voting + Specialists ($\alpha=0.8$)}
+\caption{Final model performance: CatBoost + Specialists ($\alpha=0.6$)}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Metric} & \textbf{Mean $\pm$ Std} & \textbf{95\% CI} \\
 \midrule
-F1 Macro & \textbf{0.475 $\pm$ 0.044} & [0.437, 0.513] \\
-Accuracy & 0.471 $\pm$ 0.047 & [0.430, 0.512] \\
-AUC (macro, OvR) & \textbf{0.794 $\pm$ 0.026} & \textbf{[0.771, 0.817]} \\
+F1 Macro & \textbf{0.484 $\pm$ 0.055} & [0.436, 0.532] \\
+Accuracy & 0.475 $\pm$ 0.050 & [0.432, 0.518] \\
+AUC (macro, OvR) & \textbf{0.793 $\pm$ 0.030} & [0.770, 0.816] \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[H]
 \centering
-\caption{Model comparison: Voting vs Voting + Specialists}
+\caption{Model comparison: All ensemble approaches}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Approach} & \textbf{F1 Macro} & \textbf{Gastric F1} & \textbf{std} \\
+\textbf{Approach} & \textbf{F1 Macro} & \textbf{Gastric F1} & \textbf{CRC F1} \\
 \midrule
-Voting Ensemble & 0.473 $\pm$ 0.065 & 0.338 & 0.065 \\
-\textbf{Voting + Specialists} & \textbf{0.475 $\pm$ 0.044} & \textbf{0.378} & \textbf{0.044} \\
+Voting (LR+SVM+RF+XGB) & 0.457 & 0.338 & 0.456 \\
+CatBoost only & 0.482 & 0.378 & 0.471 \\
+Voting(CatBoost) + Specialists & \textbf{0.484} & 0.400 & 0.475 \\
+\textbf{CatBoost + Specialists} & \textbf{0.482} & \textbf{0.410} & \textbf{0.481} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{q5_best_model_results.png}
+  \caption{Best model results: Voting(CatBoost) + Specialists ($\alpha=0.8$). F1 Macro = 0.484, Accuracy = 0.483, AUC = 0.802. Top left: per-class F1 comparison (base vs specialist). Top right: F1 by fold. Bottom left: confusion matrix. Bottom right: specialist improvement by class.}
+\end{figure}
 
 \noindent\textit{Note: 95\% CI = mean $\pm$ 1.96 $\times$ SE, where SE = std/$\sqrt{5}$. AUC computed using One-vs-Rest strategy.}
 
@@ -1206,8 +1215,9 @@ Lung\_18 & Lung & CRC & 0.957 \\
 
 \subsection*{Conclusions and Recommendations}
 \begin{itemize}
-  \item \textbf{Best model:} Voting Ensemble + Specialist classifiers ($\alpha=0.8$)
-  \item \textbf{Final F1 Macro:} 0.475 $\pm$ 0.044
+  \item \textbf{Best model:} CatBoost + Specialist classifiers ($\alpha=0.6$) or Voting(CatBoost) + Specialists ($\alpha=0.8$)
+  \item \textbf{Final F1 Macro:} 0.484 $\pm$ 0.055
+  \item \textbf{CatBoost advantage:} +2.7\% F1 over XGBoost-based voting
   \item \textbf{Feature reduction:} 98.7\% (1,158 $\to$ 15 features)
   \item \textbf{For production:} Flag samples with confidence $<0.7$ for manual review
   \item \textbf{Future work:} Increase Gastric sample size; add cancer-specific biomarkers
