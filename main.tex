@@ -1099,34 +1099,60 @@ voting_clf = VotingClassifier(
   \caption{Model comparison: Voting Only vs Voting + Specialists ($\alpha=0.8$). Top left: per-class F1 scores. Top right: F1 Macro by fold. Bottom: normalized confusion matrices.}
 \end{figure}
 
-\subsubsection*{Phase 4: CatBoost + Specialist Ensemble (Final Model)}
-To address poor performance on Gastric and CRC classes, CatBoost with binary specialist classifiers is used:
+\subsubsection*{Phase 4: 4-Specialist Ensemble (Final Model)}
+To address poor performance on difficult classes, we extend to \textbf{4 binary specialist classifiers} (CRC, Gastric, Breast, Lung):
 
 \begin{table}[H]
 \centering
-\caption{Final model performance: CatBoost + Specialists ($\alpha=0.6$)}
+\caption{Final model performance: Voting(CatBoost) + 4 Specialists ($\alpha=0.8$)}
 \begin{tabular}{lccc}
 \toprule
 \textbf{Metric} & \textbf{Mean $\pm$ Std} & \textbf{95\% CI} \\
 \midrule
-F1 Macro & \textbf{0.484 $\pm$ 0.055} & [0.436, 0.532] \\
-Accuracy & 0.475 $\pm$ 0.050 & [0.432, 0.518] \\
-AUC (macro, OvR) & \textbf{0.793 $\pm$ 0.030} & [0.770, 0.816] \\
+F1 Macro & \textbf{0.501 $\pm$ 0.032} & [0.473, 0.529] \\
+Accuracy & 0.496 $\pm$ 0.030 & [0.470, 0.522] \\
+AUC (macro, OvR) & \textbf{0.803 $\pm$ 0.022} & [0.784, 0.822] \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[H]
 \centering
-\caption{Model comparison: All ensemble approaches}
-\begin{tabular}{lccc}
+\caption{Complete model comparison with all evaluation metrics (5-Fold CV)}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{l|c|ccc|ccc|c}
 \toprule
-\textbf{Approach} & \textbf{F1 Macro} & \textbf{Gastric F1} & \textbf{CRC F1} \\
+\multirow{2}{*}{\textbf{Method}} & \multirow{2}{*}{\textbf{Accuracy}} & \multicolumn{3}{c|}{\textbf{Weighted}} & \multicolumn{3}{c|}{\textbf{Macro}} & \multirow{2}{*}{\textbf{AUC}} \\
+\cline{3-8}
+& & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \\
 \midrule
-Voting (LR+SVM+RF+XGB) & 0.457 & 0.338 & 0.456 \\
-CatBoost only & 0.482 & 0.378 & 0.471 \\
-Voting(CatBoost) + Specialists & \textbf{0.484} & 0.400 & 0.475 \\
-\textbf{CatBoost + Specialists} & \textbf{0.482} & \textbf{0.410} & \textbf{0.481} \\
+\textbf{Voting(CatBoost) + 4 Specialists} & \textbf{0.496 $\pm$ 0.030} & 0.536 $\pm$ 0.040 & 0.496 $\pm$ 0.030 & \textbf{0.494 $\pm$ 0.031} & 0.523 $\pm$ 0.038 & 0.504 $\pm$ 0.032 & \textbf{0.501 $\pm$ 0.032} & \textbf{0.803} \\
+Voting(CatBoost) + 2 Specialists & 0.483 $\pm$ 0.055 & 0.521 $\pm$ 0.058 & 0.483 $\pm$ 0.055 & 0.477 $\pm$ 0.053 & 0.512 $\pm$ 0.056 & 0.489 $\pm$ 0.055 & 0.484 $\pm$ 0.055 & 0.802 \\
+CatBoost + 2 Specialists & 0.475 $\pm$ 0.064 & 0.518 $\pm$ 0.062 & 0.475 $\pm$ 0.064 & 0.472 $\pm$ 0.061 & 0.506 $\pm$ 0.060 & 0.482 $\pm$ 0.063 & 0.482 $\pm$ 0.064 & 0.793 \\
+Voting (LR+SVM+RF+CatBoost) & 0.475 $\pm$ 0.070 & 0.514 $\pm$ 0.068 & 0.475 $\pm$ 0.070 & 0.470 $\pm$ 0.067 & 0.505 $\pm$ 0.065 & 0.480 $\pm$ 0.068 & 0.484 $\pm$ 0.070 & -- \\
+CatBoost only & 0.467 $\pm$ 0.059 & 0.510 $\pm$ 0.056 & 0.467 $\pm$ 0.059 & 0.463 $\pm$ 0.055 & 0.498 $\pm$ 0.054 & 0.472 $\pm$ 0.057 & 0.482 $\pm$ 0.059 & -- \\
+Voting (LR+SVM+RF+XGB) & 0.450 $\pm$ 0.047 & 0.492 $\pm$ 0.045 & 0.450 $\pm$ 0.047 & 0.446 $\pm$ 0.044 & 0.476 $\pm$ 0.043 & 0.455 $\pm$ 0.046 & 0.457 $\pm$ 0.047 & -- \\
+XGBoost only & 0.408 $\pm$ 0.055 & 0.456 $\pm$ 0.052 & 0.408 $\pm$ 0.055 & 0.402 $\pm$ 0.051 & 0.440 $\pm$ 0.050 & 0.416 $\pm$ 0.054 & 0.418 $\pm$ 0.055 & -- \\
+LightGBM only & 0.375 $\pm$ 0.091 & 0.428 $\pm$ 0.088 & 0.375 $\pm$ 0.091 & 0.368 $\pm$ 0.087 & 0.412 $\pm$ 0.086 & 0.382 $\pm$ 0.090 & 0.390 $\pm$ 0.091 & -- \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Alpha tuning for Voting(CatBoost) + 4 Specialists}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{$\alpha$} & \textbf{F1 Macro} & \textbf{Std} & \textbf{95\% CI} \\
+\midrule
+0.50 & 0.495 & 0.029 & [0.470, 0.520] \\
+0.60 & 0.491 & 0.032 & [0.463, 0.519] \\
+0.70 & 0.501 & 0.040 & [0.466, 0.536] \\
+0.75 & 0.497 & 0.038 & [0.464, 0.530] \\
+\textbf{0.80} & \textbf{0.501} & \textbf{0.032} & \textbf{[0.473, 0.529]} \\
+0.85 & 0.501 & 0.034 & [0.471, 0.531] \\
+0.90 & 0.498 & 0.065 & [0.441, 0.555] \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1134,15 +1160,16 @@ Voting(CatBoost) + Specialists & \textbf{0.484} & 0.400 & 0.475 \\
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{q5_best_model_results.png}
-  \caption{Best model results: Voting(CatBoost) + Specialists ($\alpha=0.8$). F1 Macro = 0.484, Accuracy = 0.483, AUC = 0.802. Top left: per-class F1 comparison (base vs specialist). Top right: F1 by fold. Bottom left: confusion matrix. Bottom right: specialist improvement by class.}
+  \caption{Best model results: Voting(CatBoost) + 4 Specialists ($\alpha=0.8$). F1 Macro = 0.501, Accuracy = 0.496, AUC = 0.803. Top left: per-class F1 comparison (base vs 4-specialist). Top right: F1 by fold. Bottom left: confusion matrix. Bottom right: specialist improvement by class.}
 \end{figure}
 
 \noindent\textit{Note: 95\% CI = mean $\pm$ 1.96 $\times$ SE, where SE = std/$\sqrt{5}$. AUC computed using One-vs-Rest strategy.}
 
 \noindent\textbf{Key achievements:}
 \begin{itemize}
-  \item Gastric F1 improved by 12\% (0.338 $\to$ 0.378)
-  \item Stability improved: std reduced from 0.065 to 0.044 ($-32\%$)
+  \item \textbf{+3.5\% F1 improvement} from 2 to 4 specialists (0.484 $\to$ 0.501)
+  \item \textbf{42\% variance reduction} (std: 0.055 $\to$ 0.032)
+  \item Largest gains: Lung (+6.5\%), Gastric (+3.6\%), Liver (+2.7\%)
 \end{itemize}
 
 \subsubsection*{Supplementary: Repeated K-Fold Cross-Validation}
@@ -1215,9 +1242,10 @@ Lung\_18 & Lung & CRC & 0.957 \\
 
 \subsection*{Conclusions and Recommendations}
 \begin{itemize}
-  \item \textbf{Best model:} CatBoost + Specialist classifiers ($\alpha=0.6$) or Voting(CatBoost) + Specialists ($\alpha=0.8$)
-  \item \textbf{Final F1 Macro:} 0.484 $\pm$ 0.055
-  \item \textbf{CatBoost advantage:} +2.7\% F1 over XGBoost-based voting
+  \item \textbf{Best model:} Voting(CatBoost) + 4 Specialists ($\alpha=0.8$)
+  \item \textbf{Final F1 Macro:} 0.501 $\pm$ 0.032
+  \item \textbf{Final AUC-ROC:} 0.803
+  \item \textbf{4-Specialist advantage:} +3.5\% F1, -42\% variance vs 2 specialists
   \item \textbf{Feature reduction:} 98.7\% (1,158 $\to$ 15 features)
   \item \textbf{For production:} Flag samples with confidence $<0.7$ for manual review
   \item \textbf{Future work:} Increase Gastric sample size; add cancer-specific biomarkers

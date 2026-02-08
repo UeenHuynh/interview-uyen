@@ -139,11 +139,23 @@ q5_solution/eda.py
 catboost_info/
 q5_solution/catboost_info/
 
-# ==== Q5 old scripts ====
+# ==== Q5 old/experimental scripts ====
+# Giữ lại CHỈ: stage0_prepare.py, stage1_qc.py, stage2_group_pca_direct.py, 
+#              model_pipeline.py, model_pipeline_viz.py
 q5_solution/src/voting_*.py
 q5_solution/src/specialist_*.py
 q5_solution/src/ensemble_*.py
 q5_solution/src/catboost_*.py
+q5_solution/src/hybrid_*.py
+q5_solution/src/option6_*.py
+q5_solution/src/compare_*.py
+q5_solution/src/compute_*.py
+q5_solution/src/tune_*.py
+q5_solution/src/plot_*.py
+q5_solution/src/repeated_*.py
+q5_solution/src/optimize_*.py
+q5_solution/src/*_v3.py
 
 # ==== Gemini ====
 .gemini/
+

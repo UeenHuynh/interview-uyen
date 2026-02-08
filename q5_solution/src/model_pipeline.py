@@ -146,6 +146,17 @@ def run_catboost_model(X_tr, y_tr, X_val):
     return model.predict(X_val).flatten().astype(int)
 
 
+def run_lightgbm_model(X_tr, y_tr, X_val):
+    from lightgbm import LGBMClassifier
+    sample_weights = compute_sample_weight('balanced', y_tr)
+    model = LGBMClassifier(
+        n_estimators=500, max_depth=4, learning_rate=0.05,
+        class_weight='balanced', random_state=RANDOM_STATE, verbose=-1, n_jobs=-1
+    )
+    model.fit(X_tr, y_tr, sample_weight=sample_weights)
+    return model.predict(X_val)
+
+
 # ============================================================
 # Voting Ensembles
 # ============================================================
@@ -213,13 +224,18 @@ def run_voting(X, y, cv, use_catboost=False):
 # ============================================================
 # Specialist Ensembles
 # ============================================================
-def run_specialist(X, y, cv, base='voting', alpha=0.8):
+BREAST_IDX = 1
+LUNG_IDX = 5
+
+def run_specialist(X, y, cv, base='voting', alpha=0.8, n_specialists=2):
     """
-    Base model + CRC/Gastric Specialists with probability fusion.
+    Base model + Specialists with probability fusion.
     
     base: 'voting', 'catboost', or 'voting_catboost'
+    n_specialists: 2 (CRC, Gastric) or 4 (+ Breast, Lung)
     """
-    name = f"{base.title()} + Specialists (α={alpha})"
+    spec_str = "4-spec" if n_specialists == 4 else "2-spec"
+    name = f"{base.replace('_', ' ').title()} + {spec_str} (α={alpha})"
     print(f"\n{'='*60}")
     print(name)
     print(f"{'='*60}")
@@ -272,26 +288,29 @@ def run_specialist(X, y, cv, base='voting', alpha=0.8):
             general_proba = (lr.predict_proba(X_val) + svm.predict_proba(X_val) + 
                            rf.predict_proba(X_val) + xgb.predict_proba(X_val)) / 4
         
-        # ========== CRC Specialist ==========
-        y_crc = (y_tr == CRC_IDX).astype(int)
-        crc_weights = compute_sample_weight('balanced', y_crc)
-        crc_model = XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.1,
+        # ========== Specialists ==========
+        def train_specialist(target_idx):
+            y_binary = (y_tr == target_idx).astype(int)
+            weights = compute_sample_weight('balanced', y_binary)
+            model = XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.1,
                                  random_state=RANDOM_STATE, eval_metric='logloss', n_jobs=-1)
-        crc_model.fit(X_tr, y_crc, sample_weight=crc_weights)
-        crc_proba = crc_model.predict_proba(X_val)[:, 1]
+            model.fit(X_tr, y_binary, sample_weight=weights)
+            return model.predict_proba(X_val)[:, 1]
         
-        # ========== Gastric Specialist ==========
-        y_gastric = (y_tr == GASTRIC_IDX).astype(int)
-        gastric_weights = compute_sample_weight('balanced', y_gastric)
-        gastric_model = XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.1,
-                                     random_state=RANDOM_STATE, eval_metric='logloss', n_jobs=-1)
-        gastric_model.fit(X_tr, y_gastric, sample_weight=gastric_weights)
-        gastric_proba = gastric_model.predict_proba(X_val)[:, 1]
+        crc_proba = train_specialist(CRC_IDX)
+        gastric_proba = train_specialist(GASTRIC_IDX)
         
         # ========== Fusion ==========
         fused = general_proba.copy()
         fused[:, CRC_IDX] = alpha * general_proba[:, CRC_IDX] + (1 - alpha) * crc_proba
         fused[:, GASTRIC_IDX] = alpha * general_proba[:, GASTRIC_IDX] + (1 - alpha) * gastric_proba
+        
+        if n_specialists == 4:
+            breast_proba = train_specialist(BREAST_IDX)
+            lung_proba = train_specialist(LUNG_IDX)
+            fused[:, BREAST_IDX] = alpha * general_proba[:, BREAST_IDX] + (1 - alpha) * breast_proba
+            fused[:, LUNG_IDX] = alpha * general_proba[:, LUNG_IDX] + (1 - alpha) * lung_proba
+        
         fused = fused / fused.sum(axis=1, keepdims=True)
         
         y_pred = np.argmax(fused, axis=1)
@@ -385,15 +404,17 @@ Examples:
     parser.add_argument('--rf', action='store_true', help='Random Forest')
     parser.add_argument('--xgb', action='store_true', help='XGBoost')
     parser.add_argument('--catboost', action='store_true', help='CatBoost')
+    parser.add_argument('--lightgbm', action='store_true', help='LightGBM')
     
     # Voting
     parser.add_argument('--voting', action='store_true', help='Voting (LR+SVM+RF+XGB)')
     parser.add_argument('--voting-catboost', action='store_true', help='Voting with CatBoost')
     
     # Specialists
-    parser.add_argument('--voting-specialist', action='store_true', help='Voting + Specialists')
-    parser.add_argument('--catboost-specialist', action='store_true', help='CatBoost + Specialists')
-    parser.add_argument('--voting-catboost-specialist', action='store_true', help='Voting(CatBoost) + Specialists')
+    parser.add_argument('--voting-specialist', action='store_true', help='Voting + 2 Specialists')
+    parser.add_argument('--catboost-specialist', action='store_true', help='CatBoost + 2 Specialists')
+    parser.add_argument('--voting-catboost-specialist', action='store_true', help='Voting(CatBoost) + 2 Specialists')
+    parser.add_argument('--4spec', dest='four_spec', action='store_true', help='Use 4 specialists instead of 2')
     parser.add_argument('--alpha', type=float, default=0.8, help='Fusion weight α (default: 0.8)')
     
     # Tuning
@@ -430,6 +451,8 @@ Examples:
         results.append(evaluate_cv('XGBoost', run_xgb, X, y, cv))
     if args.catboost or args.all:
         results.append(evaluate_cv('CatBoost', run_catboost_model, X, y, cv))
+    if args.lightgbm or args.all:
+        results.append(evaluate_cv('LightGBM', run_lightgbm_model, X, y, cv))
     
     # Voting
     if args.voting or args.all:
@@ -438,12 +461,13 @@ Examples:
         results.append(run_voting(X, y, cv, use_catboost=True))
     
     # Specialists
+    n_spec = 4 if args.four_spec else 2
     if args.voting_specialist or args.all:
-        results.append(run_specialist(X, y, cv, base='voting', alpha=args.alpha))
+        results.append(run_specialist(X, y, cv, base='voting', alpha=args.alpha, n_specialists=n_spec))
     if args.catboost_specialist or args.all:
-        results.append(run_specialist(X, y, cv, base='catboost', alpha=args.alpha))
+        results.append(run_specialist(X, y, cv, base='catboost', alpha=args.alpha, n_specialists=n_spec))
     if args.voting_catboost_specialist:
-        results.append(run_specialist(X, y, cv, base='voting_catboost', alpha=args.alpha))
+        results.append(run_specialist(X, y, cv, base='voting_catboost', alpha=args.alpha, n_specialists=n_spec))
     
     # Alpha tuning
     if args.tune_alpha:

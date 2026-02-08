@@ -18,6 +18,7 @@ import argparse
 import json
 from pathlib import Path
 from datetime import datetime
+import joblib
 
 import numpy as np
 import pandas as pd
@@ -52,6 +53,8 @@ CLASS_NAMES = list(LABEL_MAP.values())
 N_CLASSES = 6
 CRC_IDX = 2
 GASTRIC_IDX = 3
+BREAST_IDX = 1
+LUNG_IDX = 5
 
 plt.style.use('seaborn-v0_8-whitegrid')
 
@@ -137,11 +140,15 @@ def get_specialist_proba(X_tr, y_tr, X_val, target_class):
     return model.predict_proba(X_val)[:, 1]
 
 
-def fuse_proba(general_proba, crc_proba, gastric_proba, alpha):
+def fuse_proba(general_proba, crc_proba, gastric_proba, alpha, breast_proba=None, lung_proba=None):
     """Fuse base model proba with specialist proba."""
     fused = general_proba.copy()
     fused[:, CRC_IDX] = alpha * general_proba[:, CRC_IDX] + (1 - alpha) * crc_proba
     fused[:, GASTRIC_IDX] = alpha * general_proba[:, GASTRIC_IDX] + (1 - alpha) * gastric_proba
+    if breast_proba is not None:
+        fused[:, BREAST_IDX] = alpha * general_proba[:, BREAST_IDX] + (1 - alpha) * breast_proba
+    if lung_proba is not None:
+        fused[:, LUNG_IDX] = alpha * general_proba[:, LUNG_IDX] + (1 - alpha) * lung_proba
     fused = fused / fused.sum(axis=1, keepdims=True)
     return fused
 
@@ -149,7 +156,7 @@ def fuse_proba(general_proba, crc_proba, gastric_proba, alpha):
 # ============================================================
 # Main Evaluation Function
 # ============================================================
-def evaluate_model(X, y, model_type, use_specialist=False, alpha=0.8):
+def evaluate_model(X, y, model_type, use_specialist=False, alpha=0.8, n_specialists=2):
     """
     Run 5-fold CV and collect all metrics for visualization.
     
@@ -171,7 +178,8 @@ def evaluate_model(X, y, model_type, use_specialist=False, alpha=0.8):
     
     name = model_type.replace('_', ' ').title()
     if use_specialist:
-        name += f' + Specialist (α={alpha})'
+        spec_str = '4-spec' if n_specialists == 4 else 'Specialist'
+        name += f' + {spec_str} (α={alpha})'
     
     print(f"\n{'='*60}")
     print(f"{name}")
@@ -193,8 +201,13 @@ def evaluate_model(X, y, model_type, use_specialist=False, alpha=0.8):
             crc_proba = get_specialist_proba(X_tr, y_tr, X_val, CRC_IDX)
             gastric_proba = get_specialist_proba(X_tr, y_tr, X_val, GASTRIC_IDX)
             
-            # Fuse probabilities
-            fused_proba = fuse_proba(base_proba, crc_proba, gastric_proba, alpha)
+            if n_specialists == 4:
+                breast_proba = get_specialist_proba(X_tr, y_tr, X_val, BREAST_IDX)
+                lung_proba = get_specialist_proba(X_tr, y_tr, X_val, LUNG_IDX)
+                fused_proba = fuse_proba(base_proba, crc_proba, gastric_proba, alpha, breast_proba, lung_proba)
+            else:
+                fused_proba = fuse_proba(base_proba, crc_proba, gastric_proba, alpha)
+            
             final_pred = np.argmax(fused_proba, axis=1)
             final_f1 = f1_score(y_val, final_pred, average='macro')
             
@@ -268,6 +281,88 @@ def evaluate_model(X, y, model_type, use_specialist=False, alpha=0.8):
         result['confusion_matrix_base'] = confusion_matrix(y, all_preds_base).tolist()
     
     return result
+
+
+def train_final_model(X, y, model_type, use_specialist=False, alpha=0.8, n_specialists=2):
+    """
+    Train final models on full data and return dict of trained models.
+    This is for saving weights to be used for inference.
+    """
+    from sklearn.utils.class_weight import compute_sample_weight
+    
+    sample_weights = compute_sample_weight('balanced', y)
+    models = {}
+    
+    # Train base model
+    if model_type == 'catboost':
+        from catboost import CatBoostClassifier
+        model = CatBoostClassifier(iterations=500, depth=4, learning_rate=0.05,
+                                  loss_function='MultiClass', auto_class_weights='Balanced',
+                                  random_state=RANDOM_STATE, verbose=False)
+        model.fit(X, y)
+        models['base_model'] = model
+    elif model_type == 'voting_catboost':
+        from catboost import CatBoostClassifier
+        lr = LogisticRegression(C=0.1, class_weight='balanced', max_iter=2000, random_state=RANDOM_STATE)
+        svm = SVC(C=1.0, gamma='scale', class_weight='balanced', probability=True, random_state=RANDOM_STATE)
+        rf = RandomForestClassifier(n_estimators=200, class_weight='balanced', random_state=RANDOM_STATE, n_jobs=-1)
+        cb = CatBoostClassifier(iterations=500, depth=4, learning_rate=0.05,
+                               auto_class_weights='Balanced', random_state=RANDOM_STATE, verbose=False)
+        lr.fit(X, y); svm.fit(X, y); rf.fit(X, y); cb.fit(X, y)
+        models['lr'] = lr
+        models['svm'] = svm  
+        models['rf'] = rf
+        models['catboost'] = cb
+    elif model_type == 'voting':
+        lr = LogisticRegression(C=0.1, class_weight='balanced', max_iter=2000, random_state=RANDOM_STATE)
+        svm = SVC(C=1.0, gamma='scale', class_weight='balanced', probability=True, random_state=RANDOM_STATE)
+        rf = RandomForestClassifier(n_estimators=200, class_weight='balanced', random_state=RANDOM_STATE, n_jobs=-1)
+        xgb = XGBClassifier(n_estimators=200, max_depth=6, learning_rate=0.1,
+                           random_state=RANDOM_STATE, eval_metric='mlogloss', n_jobs=-1)
+        lr.fit(X, y); svm.fit(X, y); rf.fit(X, y); xgb.fit(X, y, sample_weight=sample_weights)
+        models['lr'] = lr
+        models['svm'] = svm
+        models['rf'] = rf
+        models['xgboost'] = xgb
+    
+    # Train specialists
+    if use_specialist:
+        def train_specialist_full(target_idx):
+            y_binary = (y == target_idx).astype(int)
+            weights = compute_sample_weight('balanced', y_binary)
+            model = XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.1,
+                                 random_state=RANDOM_STATE, eval_metric='logloss', n_jobs=-1)
+            model.fit(X, y_binary, sample_weight=weights)
+            return model
+        
+        models['specialist_crc'] = train_specialist_full(CRC_IDX)
+        models['specialist_gastric'] = train_specialist_full(GASTRIC_IDX)
+        
+        if n_specialists == 4:
+            models['specialist_breast'] = train_specialist_full(BREAST_IDX)
+            models['specialist_lung'] = train_specialist_full(LUNG_IDX)
+    
+    # Store config
+    models['config'] = {
+        'model_type': model_type,
+        'use_specialist': use_specialist,
+        'alpha': alpha,
+        'n_specialists': n_specialists,
+        'feature_names': list(X.columns),
+        'class_names': CLASS_NAMES,
+        'trained_on': len(y),
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    return models
+
+
+def save_model_weights(models, output_prefix):
+    """Save trained models to pkl file."""
+    weights_path = RESULTS_DIR / f'{output_prefix}_models.pkl'
+    joblib.dump(models, weights_path)
+    print(f"✓ Saved model weights: {weights_path}")
+    return weights_path
 
 
 # ============================================================
@@ -433,11 +528,13 @@ def main():
     parser.add_argument('--voting-catboost', action='store_true', help='Voting (LR+SVM+RF+CatBoost)')
     
     # Specialist options
-    parser.add_argument('--specialist', action='store_true', help='Add CRC/Gastric specialists')
+    parser.add_argument('--specialist', action='store_true', help='Add CRC/Gastric specialists (2 spec)')
     parser.add_argument('--catboost-specialist', action='store_true', help='CatBoost + Specialists')
     parser.add_argument('--voting-specialist', action='store_true', help='Voting + Specialists')
     parser.add_argument('--voting-catboost-specialist', action='store_true', help='Voting(CatBoost) + Specialists')
+    parser.add_argument('--4spec', dest='four_spec', action='store_true', help='Use 4 specialists (CRC, Gastric, Breast, Lung)')
     parser.add_argument('--alpha', type=float, default=0.8, help='Fusion weight α')
+    parser.add_argument('--save-weights', action='store_true', help='Save trained model weights to pkl')
     
     args = parser.parse_args()
     
@@ -476,17 +573,27 @@ def main():
     if args.specialist:
         use_specialist = True
     
+    # Determine n_specialists
+    n_specialists = 4 if args.four_spec else 2
+    
     # Run evaluation
-    result = evaluate_model(X, y, model_type, use_specialist, args.alpha)
+    result = evaluate_model(X, y, model_type, use_specialist, args.alpha, n_specialists)
     
     # Generate output prefix
     output_prefix = model_type
     if use_specialist:
-        output_prefix += f'_specialist_alpha{args.alpha}'
+        spec_str = '4spec' if n_specialists == 4 else 'specialist'
+        output_prefix += f'_{spec_str}_alpha{args.alpha}'
     
     # Save results and plot
     save_results(result, output_prefix)
     plot_results(result, output_prefix)
+    
+    # Save model weights if requested
+    if args.save_weights:
+        print("\nTraining final model on full data...")
+        models = train_final_model(X, y, model_type, use_specialist, args.alpha, n_specialists)
+        save_model_weights(models, output_prefix)
     
     print("\n" + "="*60)
     print("Done!")

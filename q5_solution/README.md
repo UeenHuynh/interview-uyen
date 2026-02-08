@@ -88,70 +88,75 @@ python src/stage0_prepare.py
 python src/stage1_qc.py
 python src/stage2_group_pca_direct.py
 
-# Train & evaluate models
-python src/model_pipeline.py --all --save
+# Train & evaluate best model (4 Specialists)
+python src/model_pipeline.py --voting-catboost-specialist --4spec --alpha 0.8
 ```
 
 ### Model Options
 ```bash
 # Individual models
-python src/model_pipeline.py --lr              # Logistic Regression
-python src/model_pipeline.py --svm             # SVM
-python src/model_pipeline.py --rf              # Random Forest
-python src/model_pipeline.py --xgb             # XGBoost
-python src/model_pipeline.py --catboost        # CatBoost
+python src/model_pipeline_viz.py --lr              # Logistic Regression
+python src/model_pipeline_viz.py --catboost        # CatBoost
 
 # Voting ensembles
-python src/model_pipeline.py --voting              # LR+SVM+RF+XGB
-python src/model_pipeline.py --voting-catboost     # LR+SVM+RF+CatBoost
+python src/model_pipeline_viz.py --voting              # LR+SVM+RF+XGB
+python src/model_pipeline_viz.py --voting-catboost     # LR+SVM+RF+CatBoost
 
-# With Specialists (best performance)
-python src/model_pipeline.py --voting-catboost-specialist --alpha 0.8
-python src/model_pipeline.py --catboost-specialist --alpha 0.6
+# With Specialists (results + figures automatically saved)
+python src/model_pipeline_viz.py --voting-catboost-specialist              # 2 specialists
+python src/model_pipeline_viz.py --voting-catboost-specialist --4spec      # 4 specialists (BEST)
 
-# With visualization output
-python src/model_pipeline_viz.py --catboost-specialist --alpha 0.6
+# Save model weights for deployment
+python src/model_pipeline_viz.py --voting-catboost-specialist --4spec --save-weights
 ```
 
 ---
 
 ## 📈 Results Summary
 
-### Best Model: Voting(CatBoost) + Specialists (α=0.8)
+### 🏆 Best Model: Voting(CatBoost) + 4 Specialists (α=0.8)
+
 | Metric | Value |
 |--------|-------|
-| **F1 Macro** | **0.484 ± 0.055** |
-| Accuracy | 0.475 |
-| **AUC-ROC (macro)** | **0.793** |
+| **F1 Macro** | **0.501 ± 0.032** |
+| Accuracy | 0.496 |
+| **AUC-ROC (macro)** | **0.803** |
 
-### Model Comparison
-| Model | F1 Macro |
-|-------|----------|
-| 🥇 Voting(CatBoost) + Specialists | **0.484** |
-| 🥈 CatBoost + Specialists (α=0.6) | 0.482 |
-| 🥉 Voting(LR+SVM+RF+CatBoost) | 0.484 |
-| CatBoost only | 0.482 |
-| Voting + Specialists | 0.460 |
-| Voting (LR+SVM+RF+XGB) | 0.457 |
+![Best Model Results](results/figures/best_model_4spec_results.png)
+
+### Complete Model Comparison
+
+| Method | F1 Macro | Accuracy | AUC | Std |
+|--------|----------|----------|-----|-----|
+| 🥇 **Voting(CatBoost) + 4 Specialists** | **0.501** | **0.496** | **0.803** | 0.032 |
+| 🥈 Voting(CatBoost) + 2 Specialists | 0.484 | 0.483 | 0.802 | 0.055 |
+| 🥉 CatBoost + 2 Specialists | 0.482 | 0.475 | 0.793 | 0.064 |
+| CatBoost only | 0.482 | - | - | 0.059 |
+| Voting (LR+SVM+RF+CatBoost) | 0.484 | - | - | 0.070 |
+| Voting (LR+SVM+RF+XGB) | 0.457 | - | - | 0.047 |
+| XGBoost | 0.418 | - | - | 0.055 |
+| LightGBM | 0.390 | - | - | 0.091 |
 
 ### Per-Class F1 Scores (Best Model)
-| Class | F1 Score |
-|-------|----------|
-| Control | 0.504 |
-| Breast | 0.416 |
-| CRC | 0.481 ★ |
-| Gastric | 0.410 ★ |
-| Liver | 0.642 |
-| Lung | 0.513 |
 
-★ = Improved by specialists
+| Class | F1 Score | Improvement |
+|-------|----------|-------------|
+| Control | 0.524 | +0.004 |
+| Breast | 0.451 | -0.011 ★ |
+| CRC | 0.493 | +0.000 |
+| Gastric | 0.382 | +0.036 ★ |
+| Liver | 0.677 | +0.027 |
+| Lung | 0.510 | +0.065 ★ |
+
+★ = Specialist classes (Breast, Gastric, Lung benefit most)
 
 ---
 
 ## 🔬 Key Findings
 
 1. **Feature Reduction**: 98.7% (1,158 → 15 features)
-2. **Best Performer**: Liver class (F1=0.64) despite smallest sample size
-3. **CatBoost Advantage**: CatBoost outperforms XGBoost (+2.7% F1)
-4. **Specialist Improvement**: CRC and Gastric classes benefit from binary specialists
-5. **Optimal Fusion**: α=0.8 for voting, α=0.6 for CatBoost base
+2. **Best Model**: Voting(CatBoost) + 4 Specialists (F1=0.501)
+3. **CatBoost Advantage**: +6.4% F1 vs XGBoost
+4. **4 Specialists Benefit**: +3.5% F1 vs 2 Specialists, -42% variance
+5. **Best Performer**: Liver class (F1=0.68) despite smallest sample size
+6. **Hardest Class**: Gastric (F1=0.38) - improved with specialists
