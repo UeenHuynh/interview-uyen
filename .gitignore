@@ -105,7 +105,12 @@ q4_solution/out/
 q5_solution/data/
 q5_solution/versions/
 q5_solution/out/
-q5_solution/results/
+
+# ==== Q5 results - ignore all except best model figure ====
+q5_solution/results/*
+!q5_solution/results/figures/
+q5_solution/results/figures/*
+!q5_solution/results/figures/best_model_4spec_results.png
 
 # ==== Q5 extra docs (chỉ giữ README.md) ====
 q5_solution/DATA_DISCOVERY.md
